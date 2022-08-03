@@ -22,6 +22,7 @@
     <WindowsTargetPlatformVersion Condition="'$(Configuration)|$(Platform)'=='d2|x64'">10.0.19041.0</WindowsTargetPlatformVersion>
     <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>RsReadQt</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
@@ -172,6 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.h" />
+    <ClInclude Include="global_configs.hpp" />
     <ClInclude Include="Serial.h" />
     <QtMoc Include="TextEdit.h" />
     <QtMoc Include="serialthread.h" />

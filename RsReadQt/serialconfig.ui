@@ -243,7 +243,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QSpinBox" name="bytesInBufferInput">
+         <widget class="QSpinBox" name="spinboxMsgLen">
           <property name="sizePolicy">
            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -309,7 +309,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QToolButton" name="fileSettingsBtn">
+       <widget class="QToolButton" name="selectFileButton">
         <property name="text">
          <string>...</string>
         </property>

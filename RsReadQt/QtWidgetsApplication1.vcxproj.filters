@@ -79,6 +79,9 @@
     <ClInclude Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="global_configs.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />

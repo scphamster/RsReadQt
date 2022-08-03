@@ -10,6 +10,7 @@
 #include <concepts>
 #include <mutex>
 #include <condition_variable>
+#include <filesystem>
 
 #include <QtGlobal>
 #include <QTranslator>
@@ -18,6 +19,7 @@
 #include <QMutexLocker>
 #include <qwaitcondition.h>
 #include <qreadwritelock.h>
+#include <qfile.h>
 
 //#include "fileapi.h"
 #include "serialib.h"
@@ -168,7 +170,7 @@ concept IsGood = requires
 template<typename PairType, typename MapType, typename ValueType>
     requires IsGood<PairType, MapType, ValueType>
 struct _helper {
-    bool FindValueAndSetPair(PairType &dest, const MapType &dataset, const ValueType &requestedValue)
+    bool ConvToPairByValueIfAny(PairType &dest, const MapType &dataset, const ValueType &requestedValue)
     {
         auto iterator = std::find_if(dataset.begin(), dataset.end(), [&requestedValue](auto &pair) {
             return (pair.second == requestedValue);
@@ -205,8 +207,8 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
             portname.append(QString::number(i));
 
             // TODO: cleanup after tests
-             auto port = portname.toStdWString().c_str();
-             auto bufsze = sizeof(pathBuffer) / sizeof(pathBuffer[0]);
+            auto port   = portname.toStdWString().c_str();
+            auto bufsze = sizeof(pathBuffer) / sizeof(pathBuffer[0]);
 
             DWORD portIsPresent =
               QueryDosDevice(portname.toStdWString().c_str(), pathBuffer, sizeof(pathBuffer) / sizeof(pathBuffer[0]));
@@ -220,6 +222,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         }
     }
 
+    //getters
     const configs_container_t GetAvlblComPorts() const noexcept { return avlblPorts; }
     const configs_container_t GetAvlblBaudrates() const noexcept { return avlblBaudrates; }
     const configs_container_t GetAvlblDatabits() const noexcept { return avlblDatabits; }
@@ -240,7 +243,6 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     const single_config_t GetSelectedStopbits() const noexcept { return stopbits; }
     const single_config_t GetSelectedParity() const noexcept { return parity; }
     const _Key            GetSelectedMsgLen() const noexcept { return dataTrackMsgLen; }
-
     const std::vector<single_config_t> GetAllConfigs() noexcept(
       std::is_nothrow_constructible_v<std::vector<single_config_t>, single_config_t>)
     {
@@ -250,9 +252,8 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     bool SetPortByName(const QString &portname) noexcept(
       std::is_nothrow_invocable_v<decltype(&configs_container_t::ConvToKeyByValueIfAny), QString, int>)
     {
-        return FindValueAndSetPair(port, avlblPorts, portname);
+        return ConvToPairByValueIfAny(port, avlblPorts, portname);
     }
-
     bool SetPortByKey(const int portKey) noexcept(
       std::is_nothrow_invocable_v<decltype(&configs_container_t::ContainsKey), const int>)
     {
@@ -273,13 +274,13 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         avlblPorts = { { PORT_NOT_SELECTED, _T("Undefined" ) } };
     }
 
-    using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::FindValueAndSetPair;
+    using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::ConvToPairByValueIfAny;
 
     // setters, return true on success otherwise - false
-    bool SetBaudrateByValue(const QString &value) { return FindValueAndSetPair(baudrate, avlblBaudrates, value); }
-    bool SetDatabitsByValue(const QString &value) { return FindValueAndSetPair(databits, avlblDatabits, value); }
-    bool SetStopbitsByValue(const QString &value) { return FindValueAndSetPair(stopbits, avlblStopbits, value); }
-    bool SetParityByValue(const QString &value) { return FindValueAndSetPair(parity, avlblParities, value); }
+    bool SetBaudrateByValue(const QString &value) { return ConvToPairByValueIfAny(baudrate, avlblBaudrates, value); }
+    bool SetDatabitsByValue(const QString &value) { return ConvToPairByValueIfAny(databits, avlblDatabits, value); }
+    bool SetStopbitsByValue(const QString &value) { return ConvToPairByValueIfAny(stopbits, avlblStopbits, value); }
+    bool SetParityByValue(const QString &value) { return ConvToPairByValueIfAny(parity, avlblParities, value); }
     bool SetMsgLen(const _Key newMsgLen) noexcept
     {
         if (newMsgLen < avlblMsgLen.first || newMsgLen > avlblMsgLen.second)
@@ -288,9 +289,14 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         dataTrackMsgLen = newMsgLen;
         return true;
     }
+    void SetConfigsFileName(QString &&name) { decodeConfigsFile.assign(name.toStdWString()); }
+    bool ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
 
     static const inline single_config_t PORT_UNDEFINED{ PORT_NOT_SELECTED, _T("Undefined") };
 
+
+
+  protected:
     // limits
     configs_container_t avlblPorts{ { PORT_NOT_SELECTED, _T("Undefined" ) } };
 
@@ -318,7 +324,6 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
 
     static const inline std::pair<_Key, _Key> avlblMsgLen{ 1, 8 };
 
-  protected:
     // selections stored here
     single_config_t port     = PORT_UNDEFINED;
     single_config_t baudrate = { 115200, _T("115200" ) };
@@ -326,6 +331,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     single_config_t stopbits = { SERIAL_STOPBITS_1, _T("1" ) };
     single_config_t parity   = { SERIAL_PARITY_NONE, _T("NONE" ) };
     _Key            dataTrackMsgLen{ 4 };
+    std::filesystem::path decodeConfigsFile;
 };
 
 using SerialConfigs = _SerialConfigs<int, QString>;

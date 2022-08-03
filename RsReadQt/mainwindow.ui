@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1077</width>
-    <height>638</height>
+    <height>529</height>
    </rect>
   </property>
   <property name="mouseTracking">
@@ -67,21 +67,12 @@
    <property name="palette">
     <palette>
      <active>
-      <colorrole role="WindowText">
+      <colorrole role="Text">
        <brush brushstyle="SolidPattern">
         <color alpha="255">
          <red>0</red>
          <green>0</green>
          <blue>0</blue>
-        </color>
-       </brush>
-      </colorrole>
-      <colorrole role="Text">
-       <brush brushstyle="SolidPattern">
-        <color alpha="255">
-         <red>11</red>
-         <green>57</green>
-         <blue>8</blue>
         </color>
        </brush>
       </colorrole>
@@ -123,15 +114,6 @@
       </colorrole>
      </active>
      <inactive>
-      <colorrole role="WindowText">
-       <brush brushstyle="SolidPattern">
-        <color alpha="255">
-         <red>0</red>
-         <green>0</green>
-         <blue>0</blue>
-        </color>
-       </brush>
-      </colorrole>
       <colorrole role="Text">
        <brush brushstyle="SolidPattern">
         <color alpha="255">
@@ -179,15 +161,6 @@
       </colorrole>
      </inactive>
      <disabled>
-      <colorrole role="WindowText">
-       <brush brushstyle="SolidPattern">
-        <color alpha="255">
-         <red>120</red>
-         <green>120</green>
-         <blue>120</blue>
-        </color>
-       </brush>
-      </colorrole>
       <colorrole role="Text">
        <brush brushstyle="SolidPattern">
         <color alpha="255">

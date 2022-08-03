@@ -2,6 +2,10 @@
 #include <QtGlobal>
 #include <type_traits>
 #include <qsettings.h>
+#include "global_configs.hpp"
+#include <qfile.h>
+#include <qfiledialog.h>
+#include <qtoolbutton.h>
 
 SerialConfig::SerialConfig(std::shared_ptr<void> &databridgeConfigs, QWidget *parent)
   : serialConfigs{ std::add_lvalue_reference_t<std::shared_ptr<SerialConfigs>>(databridgeConfigs) }
@@ -20,6 +24,7 @@ SerialConfig::SerialConfig(std::shared_ptr<void> &databridgeConfigs, QWidget *pa
     connect(dropdownPARITY, &QComboBox::currentTextChanged, this, &SerialConfig::OnSelparitySelected);
     connect(buttonAPPLY, &QPushButton::clicked, this, &SerialConfig::OnApplyClick);
     connect(spinboxMsgLen, &QSpinBox::valueChanged, this, &SerialConfig::OnMsgLenValueChanged);
+    connect(selectFileButton, &QToolButton::clicked, this, &SerialConfig::OnSpecifyFileWithSettings);
 
     Init();
 }
@@ -30,9 +35,9 @@ void
 SerialConfig::RetreiveSettingsFromSystem()
 {
     QSettings settings;
+    settings.beginGroup(SERIAL_SYSTEMCONFIGS_NAME);
 
-    settings.beginGroup("SerialConfigs");
-
+    //TODO: add all settings
     if (settings.contains("Port")) {
         auto avlblPorts = serialConfigs->GetAvlblComPorts();
 
@@ -67,10 +72,11 @@ void
 SerialConfig::SaveSettingsToSystem()
 {
     QSettings settings;
-
+    // TODO: add all settings
     settings.beginGroup("SerialConfigs");
     {
         settings.setValue("Port", localSelections["Port"].first);
+
     }
     settings.endGroup();
 }
@@ -174,4 +180,10 @@ void
 SerialConfig::OnMsgLenValueChanged(int value)
 {
     localSelections["DeviceMsgLen"] = { value, QString::number(value) };
+}
+
+void
+SerialConfig::OnSpecifyFileWithSettings()
+{
+    serialConfigs->SetConfigsFileName(QFileDialog::getOpenFileName(this, tr("Open configurations file"), "", tr("*.json")));
 }

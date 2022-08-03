@@ -7,12 +7,6 @@
 template<typename ConfigsT>
 class Configurator {
   public:
-    // void PutValuesToDropDown(QComboBox &dropDown, const ConfigsT &values)
-    //{
-    //     std::for_each(values.begin(), values.end(), [&dropDown](const auto &pair) { dropDown.addItem(pair.second);
-    //     });
-    // }
-
     void PutValuesToDropDown(QComboBox *dropDown, const ConfigsT &values)
     {
         std::for_each(values.begin(), values.end(), [&dropDown](const auto &pair) { dropDown->addItem(pair.second); });
@@ -40,6 +34,7 @@ class SerialConfig : public QDialog,
     void OnSelstopbitsSelected(const QString &newSelection);
     void OnSelparitySelected(const QString &newSelection);
     void OnMsgLenValueChanged(int value);
+    void OnSpecifyFileWithSettings();
 
     void OnApplyClick();
     void OnCancelClick();

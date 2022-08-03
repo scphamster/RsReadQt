@@ -8,16 +8,11 @@
 #include <qline.h>
 #include <qstring.h>
 
+#include "global_configs.hpp"
 #include "ui_mainwindow.h"
 #include "Serial.h"
 #include "serialthread.h"
 #include "TextEdit.h"
-
-constexpr auto lhRhSplittWidth = 5;
-constexpr auto sliderWidth     = 5;
-constexpr auto BOTdOCKdEFhEIGHT       = 0.3;
-constexpr auto APPNAME          = "RsRead";
-constexpr auto ORGANIZATION           = "Anton";
 
 class MyWidget : public QWidget {
     Q_OBJECT;
@@ -29,7 +24,8 @@ class MyWidget : public QWidget {
 
     ~MyWidget() noexcept { }
 
-    void resizeTxtEditors(const QSize &newsize) {
+    void resizeTxtEditors(const QSize &newsize)
+    {
         auto newheight = newsize.height();
         auto newwidth  = newsize.width();
         auto lhWidth   = newwidth * lhRhSplitPos - lhRhSplittWidth;
@@ -47,7 +43,6 @@ class MyWidget : public QWidget {
         resizeTxtEditors(event->size());
     }
 
-
     void ChangeProportions();
 
     void SetTxtEditors(auto *lhTxt, auto *rhTxt)
@@ -61,9 +56,9 @@ class MyWidget : public QWidget {
     void mouseMoveEvent(QMouseEvent *ev) override;
 
   private:
-    TextEdit *lhTxtEdit    = nullptr;
-    TextEdit *rhTxtEdit    = nullptr;
-    double    lhRhSplitPos = 0.5;
+    TextEdit *lhTxtEdit                    = nullptr;
+    TextEdit *rhTxtEdit                    = nullptr;
+    double    lhRhSplitPos                 = 0.5;
     bool      userIsChangingProportionsNow = false;
 };
 
