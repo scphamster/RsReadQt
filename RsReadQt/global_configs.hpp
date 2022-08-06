@@ -7,3 +7,4 @@ constexpr auto APPNAME                      = "RsRead";
 constexpr auto ORGANIZATION                 = "Anton";
 constexpr auto SERIAL_SYSTEMCONFIGS_NAME    = "SerialConfigs";
 constexpr auto SYSTEMsETTINGSkEY_DECODEfILE = "DecodeFile";
+constexpr auto RAWOUTPUTTABNAME             = "Raw";

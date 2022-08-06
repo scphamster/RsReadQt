@@ -6,6 +6,8 @@
 #include <qfile.h>
 #include <qfiledialog.h>
 #include <qtoolbutton.h>
+#include <qjsondocument.h>
+#include <qjsonobject.h>
 
 SerialConfig::SerialConfig(std::shared_ptr<void> &databridgeConfigs, QWidget *parent)
   : serialConfigs{ std::add_lvalue_reference_t<std::shared_ptr<SerialConfigs>>(databridgeConfigs) }
@@ -186,4 +188,7 @@ void
 SerialConfig::OnSpecifyFileWithSettings()
 {
     serialConfigs->SetConfigsFileName(QFileDialog::getOpenFileName(this, tr("Open configurations file"), "", tr("*.json")));
+
+    //TEST
+
 }

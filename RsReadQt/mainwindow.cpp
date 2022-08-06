@@ -7,6 +7,10 @@
 #include <qevent.h>
 #include <qstyle.h>
 #include <qcoreapplication.h>
+#include <qjsondocument.h>
+#include <qlayout.h>
+#include <QtWidgets/qhboxlayout>
+
 //#define NOWRITERTHREAD
 
 MainWindow::MainWindow(QWidget *parent)
@@ -17,19 +21,26 @@ MainWindow::MainWindow(QWidget *parent)
     QCoreApplication::setApplicationName(APPNAME);
     QCoreApplication::setOrganizationName(ORGANIZATION);
 
-    outputWidget = new MyWidget(OutputDocker);
-    outputWidget->setObjectName(QString::fromUtf8("outputWidget"));
-    outputWidget->setMouseTracking(true);
+    outputTabs = new QTabWidget(OutputDocker);
 
-    rawOutputTxt = new TextEdit(outputWidget);
+    rawOutputWidget = new MyWidget(outputTabs);
+    rawOutputWidget->setObjectName(QString::fromUtf8("rawOutputWidget"));
+    rawOutputWidget->setMouseTracking(true);
+
+    rawOutputTxt = new TextEdit(rawOutputWidget);
     rawOutputTxt->setObjectName(QString::fromUtf8("rawOutputTxt"));
 
-    asciiOutputTxt = new TextEdit(outputWidget);
+    asciiOutputTxt = new TextEdit(rawOutputWidget);
     asciiOutputTxt->setObjectName(QStringLiteral("asciiOutputTxt"));
 
-    outputWidget->SetTxtEditors(rawOutputTxt, asciiOutputTxt);
-    OutputDocker->setWidget(outputWidget);
-    
+    rawOutputWidget->SetTxtEditors(rawOutputTxt, asciiOutputTxt);
+    outputTabs->addTab(rawOutputWidget, RAWOUTPUTTABNAME);
+
+    decodedOutputTxt    = new QPlainTextEdit();
+    outputTabs->addTab(decodedOutputTxt, "Decoded data");
+
+    OutputDocker->setWidget(outputTabs);
+
     resizeDocks({ OutputDocker }, { static_cast<int>(BOTdOCKdEFhEIGHT * size().height()) }, Qt::Orientation::Vertical);
 
     connect(actionConfigure_serial, &QAction::triggered, this, &MainWindow::OnSerialConfigureClicked);
@@ -79,7 +90,7 @@ MainWindow::OnThreadNotificaiton()
     asciiOutput.append(QString("\nMsg number: "));
     asciiOutput.append(QString::number(data_item->msg_counter));
     asciiOutput.append(QString(":\n"));
-    asciiOutput.append(QByteArray(data_item->data._Unchecked_begin(), data_item->bytes_in_buffer));
+    asciiOutput.append(QByteArray(reinterpret_cast<char *>(data_item->data._Unchecked_begin()), data_item->bytes_in_buffer));
 
     rawOutputTxt->appendPlainText(rawOutput);
     asciiOutputTxt->appendPlainText(asciiOutput);
@@ -121,7 +132,7 @@ MainWindow::OnStartSerialClicked()
     }
 
 #ifndef NOWRITERTHREAD
-    writerThr = new TxtOutputThread(databridgeData, rawOutputTxt, asciiOutputTxt);
+    writerThr = new TxtOutputThread(databridgeData, rawOutputTxt, asciiOutputTxt, decodedOutputTxt, databridgeConfig);
     connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater);
 #endif
 
@@ -139,12 +150,6 @@ MainWindow::OnStartSerialClicked()
 #endif
 
     readerThr->start();
-
-    OutputDocker->setGeometry(0,
-                              static_cast<int>(static_cast<double>(size().height()) * 0.65),
-                              size().width(),
-                              static_cast<int>(static_cast<double>(size().height()) * 0.5));
-    OutputDocker->updateGeometry();
 }
 
 void

@@ -13,6 +13,7 @@
 #include "Serial.h"
 #include "serialthread.h"
 #include "TextEdit.h"
+#include <qtabwidget.h>
 
 class MyWidget : public QWidget {
     Q_OBJECT;
@@ -72,8 +73,6 @@ class MainWindow : public QMainWindow,
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    TextEdit *rawOutputTxt   = nullptr;
-    TextEdit *asciiOutputTxt = nullptr;
 
   private slots:
     void OnSerialConfigureClicked();
@@ -82,7 +81,13 @@ class MainWindow : public QMainWindow,
     void OnThreadNotificaiton();
 
   protected:
-    MyWidget *outputWidget = nullptr;
+    MyWidget *rawOutputWidget = nullptr;
+    QTabWidget *outputTabs    = nullptr;
+    TextEdit *rawOutputTxt   = nullptr;
+    TextEdit *asciiOutputTxt = nullptr;
+
+    QWidget        *decodedOutputWidget = nullptr;
+    QPlainTextEdit  *decodedOutputTxt = nullptr;
 
   private:
     uint64_t                             rowcounter = 0;

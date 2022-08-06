@@ -50,5 +50,5 @@ class SerialConfig : public QDialog,
                                          { "Databits", { SERIAL_DATABITS_8, _T("8" ) } },
                                          { "Stopbits", { SERIAL_STOPBITS_1, _T("1" ) } },
                                          { "Parity", { SERIAL_PARITY_NONE, _T("NONE" ) } },
-                                         { "DeviceMsgLen", { 4, _T( "4" ) } } };
+                                         { "DeviceMsgLen", { 8, _T( "8" ) } } };
     };

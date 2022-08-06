@@ -248,6 +248,26 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     {
         return std::vector<single_config_t>{ port, baudrate, databits, stopbits, parity };
     }
+    QString GetConfigsFileName() { return decodeConfigsFile; }
+
+    using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::ConvToPairByValueIfAny;
+
+    // setters, return true on success otherwise - false
+    bool SetBaudrateByValue(const QString &value) { return ConvToPairByValueIfAny(baudrate, avlblBaudrates, value); }
+    bool SetDatabitsByValue(const QString &value) { return ConvToPairByValueIfAny(databits, avlblDatabits, value); }
+    bool SetStopbitsByValue(const QString &value) { return ConvToPairByValueIfAny(stopbits, avlblStopbits, value); }
+    bool SetParityByValue(const QString &value) { return ConvToPairByValueIfAny(parity, avlblParities, value); }
+    bool SetMsgLen(const _Key newMsgLen) noexcept
+    {
+        if (newMsgLen < avlblMsgLen.first || newMsgLen > avlblMsgLen.second)
+            return false;
+
+        dataTrackMsgLen = newMsgLen;
+        return true;
+    }
+    void SetConfigsFileName(const QString &name) { decodeConfigsFile = name; }
+    bool ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
+    static const inline single_config_t PORT_UNDEFINED{ PORT_NOT_SELECTED, _T("Undefined") };
 
     bool SetPortByName(const QString &portname) noexcept(
       std::is_nothrow_invocable_v<decltype(&configs_container_t::ConvToKeyByValueIfAny), QString, int>)
@@ -273,26 +293,6 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         avlblPorts.clear();
         avlblPorts = { { PORT_NOT_SELECTED, _T("Undefined" ) } };
     }
-
-    using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::ConvToPairByValueIfAny;
-
-    // setters, return true on success otherwise - false
-    bool SetBaudrateByValue(const QString &value) { return ConvToPairByValueIfAny(baudrate, avlblBaudrates, value); }
-    bool SetDatabitsByValue(const QString &value) { return ConvToPairByValueIfAny(databits, avlblDatabits, value); }
-    bool SetStopbitsByValue(const QString &value) { return ConvToPairByValueIfAny(stopbits, avlblStopbits, value); }
-    bool SetParityByValue(const QString &value) { return ConvToPairByValueIfAny(parity, avlblParities, value); }
-    bool SetMsgLen(const _Key newMsgLen) noexcept
-    {
-        if (newMsgLen < avlblMsgLen.first || newMsgLen > avlblMsgLen.second)
-            return false;
-
-        dataTrackMsgLen = newMsgLen;
-        return true;
-    }
-    void SetConfigsFileName(QString &&name) { decodeConfigsFile.assign(name.toStdWString()); }
-    bool ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
-
-    static const inline single_config_t PORT_UNDEFINED{ PORT_NOT_SELECTED, _T("Undefined") };
 
 
 
@@ -330,8 +330,8 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     single_config_t databits = { SERIAL_DATABITS_8, _T("8" ) };
     single_config_t stopbits = { SERIAL_STOPBITS_1, _T("1" ) };
     single_config_t parity   = { SERIAL_PARITY_NONE, _T("NONE" ) };
-    _Key            dataTrackMsgLen{ 4 };
-    std::filesystem::path decodeConfigsFile;
+    _Key            dataTrackMsgLen{ 8 };
+    QString decodeConfigsFile;
 };
 
 using SerialConfigs = _SerialConfigs<int, QString>;
