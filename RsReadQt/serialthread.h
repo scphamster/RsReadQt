@@ -1,25 +1,37 @@
 #pragma once
 #include <qthread.h>
 #include <qmutex.h>
-#include "Serial.h"
-#include <qtextedit.h>
-#include <qplaintextedit.h>
+
 #include <QTime>
+#include <qplaintextedit.h>
+
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <qvalueaxis.h>
+#include <QScatterSeries>
+#include <QLineSeries>
+#include <QSplineSeries>
 
 #include <vector>
 #include <map>
 #include <memory>
 #include <deque>
 
-//DT = DataTrack
+#include "Serial.h"   //this header should be last
+// DT = DataTrack
 
-class SerialThread : public QThread {
+class ReadingThread : public QThread {
     Q_OBJECT
   public:
-    SerialThread() = delete;
-    SerialThread(std::shared_ptr<void> databridgeConfig, deque_s<std::shared_ptr<::dataPacket>> &data, QObject *parent);
-    ~SerialThread();
+    ReadingThread() = delete;
+    ReadingThread(std::shared_ptr<void> databridgeConfig, deque_s<std::shared_ptr<::dataPacket>> &data, QObject *parent);
+    //~ReadingThread();
     void run() override;
+
+  public slots:
+    void quit();
 
   signals:
     void notificationDataArrived();
@@ -51,13 +63,13 @@ class ArincLabel : protected std::pair<int, QString> {
 
 class ArincMessage {
   public:
-    QTime      timeArrivalPC;
-    QTime      timeArrivalDT;
-    int        channel;
-    //ArincLabel labelRaw;
-    uint8_t    labelRaw;
-    uint64_t   valueRaw;
-    uint64_t   timeRaw;
+    QTime timeArrivalPC;
+    QTime timeArrivalDT;
+    int   channel;
+    // ArincLabel labelRaw;
+    uint8_t  labelRaw;
+    uint64_t valueRaw;
+    uint64_t timeRaw;
 };
 
 class DTMsgElement {
@@ -97,7 +109,7 @@ class DecodedData {
     void NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTMsgElement &configs, auto &container);
 
   protected:
-    std::deque<ArincMessage>                       messages;
+    std::deque<ArincMessage>                        messages;
     std::map<ArincLabel, std::vector<ArincMessage>> labels;
 
     std::map<QString, DTMsgElement> DTMessageStructure;
@@ -106,25 +118,49 @@ class DecodedData {
   private:
 };
 
-class TxtOutputThread : public QThread,
-                        protected DecodedData {
+class DataChart {
+  public:
+    QGraphicsScene *scene  = nullptr;
+    QGraphicsView  *view   = nullptr;
+    QChartView     *chview = nullptr;
+    QChart         *chart  = nullptr;
+    QValueAxis     *yaxis  = nullptr;
+    QValueAxis     *xaxis  = nullptr;
+    QLineSeries *series = nullptr;
+    std::map<int, QLineSeries> labelsSeries;
+
+    bool            isInitialized = false;
+};
+
+class OutputThread : public QThread,
+                     protected DecodedData {
     Q_OBJECT
 
   public:
-    TxtOutputThread() = delete;
-    TxtOutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
-                    QPlainTextEdit                         *lhTxt,
-                    QPlainTextEdit                         *rhTxt,
-                    QPlainTextEdit                         *decodedTxt,
-                    std::shared_ptr<void>                   dataBridgeConfigs);
+    OutputThread() = delete;
+    OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
+                 QPlainTextEdit                         *lhTxt,
+                 QPlainTextEdit                         *rhTxt,
+                 QPlainTextEdit                         *decodedTxt,
+                 std::shared_ptr<void>                   dataBridgeConfigs,
+                 DataChart                              *chart);
+
+    ~OutputThread();
 
     void ShowNormalizedRawData(auto data);
+    void ShowDiagram();
+    void AddLabelToDiagram(int labelIdx);
+
   public slots:
     void ShowNewData();
+    bool SaveSession();
+    //void quit();
 
   private:
     deque_s<std::shared_ptr<::dataPacket>> &dataToOutput;
     QPlainTextEdit                         *rawOutputTxt     = nullptr;
     QPlainTextEdit                         *asciiOutputTxt   = nullptr;
     QPlainTextEdit                         *decodedOutputTxt = nullptr;
+    QGraphicsScene                         *graphics         = nullptr;
+    DataChart                              *diagram          = nullptr;
 };

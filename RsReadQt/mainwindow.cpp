@@ -36,13 +36,20 @@ MainWindow::MainWindow(QWidget *parent)
     rawOutputWidget->SetTxtEditors(rawOutputTxt, asciiOutputTxt);
     outputTabs->addTab(rawOutputWidget, RAWOUTPUTTABNAME);
 
-    decodedOutputTxt    = new QPlainTextEdit();
+    decodedOutputTxt = new QPlainTextEdit();
     outputTabs->addTab(decodedOutputTxt, "Decoded data");
 
     OutputDocker->setWidget(outputTabs);
 
     resizeDocks({ OutputDocker }, { static_cast<int>(BOTdOCKdEFhEIGHT * size().height()) }, Qt::Orientation::Vertical);
 
+    // Test
+
+    diagram.chart  = new QChart;
+    diagram.chview = new QChartView(diagram.chart);
+    setCentralWidget(diagram.chview);
+
+    // End Test
     connect(actionConfigure_serial, &QAction::triggered, this, &MainWindow::OnSerialConfigureClicked);
     connect(actionStart_receiver, &QAction::triggered, this, &MainWindow::OnStartSerialClicked);
     connect(actionStop_receiver, &QAction::triggered, this, &MainWindow::OnStopSerialClicked);
@@ -50,10 +57,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    if (writerThr != nullptr) {
+    if (readerThr != nullptr && readerThr->isRunning()) {
+        readerThr->quit();
+        readerThr->wait();
+        readerThr = nullptr;
+    }
+
+    if (writerThr != nullptr && writerThr->isRunning()) {
         writerThr->quit();
         writerThr->wait();
+        writerThr = nullptr;
     }
+
+    databridgeData.clear();
 }
 
 void
@@ -132,15 +148,16 @@ MainWindow::OnStartSerialClicked()
     }
 
 #ifndef NOWRITERTHREAD
-    writerThr = new TxtOutputThread(databridgeData, rawOutputTxt, asciiOutputTxt, decodedOutputTxt, databridgeConfig);
-    connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater);
+    writerThr = new OutputThread(databridgeData, rawOutputTxt, asciiOutputTxt, decodedOutputTxt, databridgeConfig, &diagram);
+    connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater, Qt::DirectConnection);
 #endif
 
-    readerThr = new SerialThread(databridgeConfig, databridgeData, nullptr);
-    connect(readerThr, &SerialThread::finished, readerThr, &SerialThread::deleteLater);
+    readerThr = new ReadingThread(databridgeConfig, databridgeData, this);
+    connect(readerThr, &QThread::finished, readerThr, &QThread::deleteLater, Qt::DirectConnection);
 
 #ifndef NOWRITERTHREAD
-    connect(readerThr, &SerialThread::notificationDataArrived, writerThr, &TxtOutputThread::ShowNewData);
+    connect(readerThr, &ReadingThread::notificationDataArrived, writerThr, &OutputThread::ShowNewData);
+    connect(saveSessionAs_menu, &QAction::triggered, writerThr, &OutputThread::SaveSession);
 #else
     connect(readerThr, &SerialThread::notificationDataArrived, this, &MainWindow::OnThreadNotificaiton);
 #endif
@@ -150,14 +167,23 @@ MainWindow::OnStartSerialClicked()
 #endif
 
     readerThr->start();
+
+    // TEST
 }
 
 void
 MainWindow::OnStopSerialClicked()
 {
-    assert(readerThr != nullptr);
-    if (readerThr->isRunning()) {
+    if (readerThr != nullptr && readerThr->isRunning()) {
         readerThr->quit();
+        readerThr->wait();
+        readerThr = nullptr;
+    }
+
+    if (writerThr != nullptr && writerThr->isRunning()) {
+        writerThr->quit();
+        writerThr->wait();
+        writerThr = nullptr;
     }
 }
 

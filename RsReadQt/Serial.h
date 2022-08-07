@@ -222,7 +222,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         }
     }
 
-    //getters
+    // getters
     const configs_container_t GetAvlblComPorts() const noexcept { return avlblPorts; }
     const configs_container_t GetAvlblBaudrates() const noexcept { return avlblBaudrates; }
     const configs_container_t GetAvlblDatabits() const noexcept { return avlblDatabits; }
@@ -238,11 +238,11 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         else
             return false;
     }
-    const single_config_t GetSelectedBaudrate() const noexcept { return baudrate; }
-    const single_config_t GetSelectedDatabits() const noexcept { return databits; }
-    const single_config_t GetSelectedStopbits() const noexcept { return stopbits; }
-    const single_config_t GetSelectedParity() const noexcept { return parity; }
-    const _Key            GetSelectedMsgLen() const noexcept { return dataTrackMsgLen; }
+    const single_config_t              GetSelectedBaudrate() const noexcept { return baudrate; }
+    const single_config_t              GetSelectedDatabits() const noexcept { return databits; }
+    const single_config_t              GetSelectedStopbits() const noexcept { return stopbits; }
+    const single_config_t              GetSelectedParity() const noexcept { return parity; }
+    const _Key                         GetSelectedMsgLen() const noexcept { return dataTrackMsgLen; }
     const std::vector<single_config_t> GetAllConfigs() noexcept(
       std::is_nothrow_constructible_v<std::vector<single_config_t>, single_config_t>)
     {
@@ -265,8 +265,8 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         dataTrackMsgLen = newMsgLen;
         return true;
     }
-    void SetConfigsFileName(const QString &name) { decodeConfigsFile = name; }
-    bool ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
+    void                                SetConfigsFileName(const QString &name) { decodeConfigsFile = name; }
+    bool                                ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
     static const inline single_config_t PORT_UNDEFINED{ PORT_NOT_SELECTED, _T("Undefined") };
 
     bool SetPortByName(const QString &portname) noexcept(
@@ -293,8 +293,6 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         avlblPorts.clear();
         avlblPorts = { { PORT_NOT_SELECTED, _T("Undefined" ) } };
     }
-
-
 
   protected:
     // limits
@@ -331,7 +329,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     single_config_t stopbits = { SERIAL_STOPBITS_1, _T("1" ) };
     single_config_t parity   = { SERIAL_PARITY_NONE, _T("NONE" ) };
     _Key            dataTrackMsgLen{ 8 };
-    QString decodeConfigsFile;
+    QString         decodeConfigsFile;
 };
 
 using SerialConfigs = _SerialConfigs<int, QString>;
@@ -376,6 +374,12 @@ class deque_s {
         qcondition.notify_one();
     }
 
+    void clear()
+    {
+        QMutexLocker lock(&qmutex);
+        data.clear();
+    }
+
   private:
     std::deque<T, Allocator> data;
     // std::mutex               mutex;
@@ -407,6 +411,7 @@ class Serial : private dataPacket,
     ~Serial() { Stop(); }
 
     char Open();
+    bool IsOpen() { return serialib::isDeviceOpen(); }
     bool Read();
     bool Stop();
 

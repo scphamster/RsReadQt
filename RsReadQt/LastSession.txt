@@ -1,0 +1,9 @@
+Channel 1Label 236Data 16774634Time 16514043
+Channel 1Label 157Data 16774630Time 16579836
+Channel 1Label 88Data 16774628Time 16645629
+Channel 1Label 73Data 16774632Time 16711422
+Channel 1Label 13Data 16774631Time 16777215
+Channel 1Label 234Data 16774626Time 0
+Channel 1Label 169Data 16774627Time 65793
+Channel 1Label 127Data 16774624Time 131586
+Channel 1Label 15Data 16774620Time 197379

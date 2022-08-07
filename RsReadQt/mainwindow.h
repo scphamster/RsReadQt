@@ -1,19 +1,17 @@
 #pragma once
 
+#include "ui_mainwindow.h"
 #include <QtWidgets/QMainWindow>
-#include <qdockwidget.h>
-#include <qtextedit.h>
-#include <qlistwidget.h>
-#include <qevent.h>
-#include <qline.h>
 #include <qstring.h>
+#include <qdockwidget.h>
+#include <qtabwidget.h>
+#include <qtextedit.h>
+#include <qevent.h>
 
 #include "global_configs.hpp"
-#include "ui_mainwindow.h"
-#include "Serial.h"
-#include "serialthread.h"
 #include "TextEdit.h"
-#include <qtabwidget.h>
+#include "serialthread.h"
+#include "Serial.h" //this header should be last
 
 class MyWidget : public QWidget {
     Q_OBJECT;
@@ -66,7 +64,6 @@ class MyWidget : public QWidget {
 class MainWindow : public QMainWindow,
                    public Ui::MainWindowClass {
     Q_OBJECT;
-    // using TextEdit = QTextEdit;
     using TextEdit = TextEdit;
 
   public:
@@ -81,19 +78,21 @@ class MainWindow : public QMainWindow,
     void OnThreadNotificaiton();
 
   protected:
-    MyWidget *rawOutputWidget = nullptr;
-    QTabWidget *outputTabs    = nullptr;
-    TextEdit *rawOutputTxt   = nullptr;
-    TextEdit *asciiOutputTxt = nullptr;
+    MyWidget   *rawOutputWidget = nullptr;
+    QTabWidget *outputTabs      = nullptr;
+    TextEdit   *rawOutputTxt    = nullptr;
+    TextEdit   *asciiOutputTxt  = nullptr;
 
     QWidget        *decodedOutputWidget = nullptr;
-    QPlainTextEdit  *decodedOutputTxt = nullptr;
+    QPlainTextEdit *decodedOutputTxt    = nullptr;
 
   private:
     uint64_t                             rowcounter = 0;
     std::shared_ptr<void>                databridgeConfig;
     deque_s<std::shared_ptr<dataPacket>> databridgeData;
 
-    SerialThread    *readerThr = nullptr;
-    TxtOutputThread *writerThr = nullptr;
+    ReadingThread  *readerThr = nullptr;
+    OutputThread   *writerThr = nullptr;
+    DataChart       diagram;    
+
 };

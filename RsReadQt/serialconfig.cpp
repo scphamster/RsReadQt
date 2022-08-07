@@ -34,6 +34,20 @@ SerialConfig::SerialConfig(std::shared_ptr<void> &databridgeConfigs, QWidget *pa
 SerialConfig::~SerialConfig() { }
 
 void
+SerialConfig::SaveSettingsToSystem()
+{
+    QSettings settings;
+    // TODO: add all settings
+    settings.beginGroup("SerialConfigs");
+    {
+        settings.setValue("Port", localSelections["Port"].first);
+        settings.setValue("ConfigsFile", serialConfigs->GetConfigsFileName());
+
+    }
+    settings.endGroup();
+}
+
+void
 SerialConfig::RetreiveSettingsFromSystem()
 {
     QSettings settings;
@@ -60,6 +74,10 @@ SerialConfig::RetreiveSettingsFromSystem()
         localSelections["Port"] = serialConfigs->GetSelectedPort();
     }
 
+    if (settings.contains("ConfigsFile")) {
+        serialConfigs->SetConfigsFileName(settings.value("ConfigsFile").toString());
+    }
+
     localSelections["Baudrate"]     = serialConfigs->GetSelectedBaudrate();
     localSelections["Databits"]     = serialConfigs->GetSelectedDatabits();
     localSelections["Stopbits"]     = serialConfigs->GetSelectedStopbits();
@@ -67,19 +85,6 @@ SerialConfig::RetreiveSettingsFromSystem()
     localSelections["DeviceMsgLen"] = { serialConfigs->GetSelectedMsgLen(),
                                         QString::number(serialConfigs->GetSelectedMsgLen()) };
 
-    settings.endGroup();
-}
-
-void
-SerialConfig::SaveSettingsToSystem()
-{
-    QSettings settings;
-    // TODO: add all settings
-    settings.beginGroup("SerialConfigs");
-    {
-        settings.setValue("Port", localSelections["Port"].first);
-
-    }
     settings.endGroup();
 }
 

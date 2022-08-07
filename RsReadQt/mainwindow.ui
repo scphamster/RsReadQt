@@ -60,7 +60,8 @@
     <addaction name="actionOpen"/>
     <addaction name="actionOpen_old_session"/>
     <addaction name="separator"/>
-    <addaction name="actionSave"/>
+    <addaction name="saveSession_menu"/>
+    <addaction name="saveSessionAs_menu"/>
     <addaction name="separator"/>
     <addaction name="actionConfigure_current_session"/>
    </widget>
@@ -140,9 +141,9 @@
     <string>Open old session</string>
    </property>
   </action>
-  <action name="actionSave">
+  <action name="saveSessionAs_menu">
    <property name="text">
-    <string>Save</string>
+    <string>Save session as...</string>
    </property>
   </action>
   <action name="actionConfigure_current_session">
@@ -153,6 +154,11 @@
   <action name="actionDupa">
    <property name="text">
     <string>Dupa</string>
+   </property>
+  </action>
+  <action name="saveSession_menu">
+   <property name="text">
+    <string>Save</string>
    </property>
   </action>
  </widget>
