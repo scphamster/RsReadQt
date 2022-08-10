@@ -8,6 +8,7 @@
 #include <qjsonarray.h>
 #include <QFile>
 #include <QFileDialog>
+#include <QMessageBox>
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -27,22 +28,18 @@
 
 #include <windows.h>
 
-ReadingThread::ReadingThread(std::shared_ptr<void> databidgeData, deque_s<std::shared_ptr<::dataPacket>> &data, QObject *parent)
+ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
+                             deque_s<std::shared_ptr<::dataPacket>> &data,
+                             QObject                                *parent)
   : serDevice(std::static_pointer_cast<SerialConfigs>(databidgeData), data)
   , QThread(parent)
 { }
-
-// ReadingThread::~ReadingThread()
-//{
-//     serDevice.Stop();
-// }
 
 void
 ReadingThread::quit()
 {
     serDevice.Stop();
     QThread::quit();
-    // ReadingThread::~ReadingThread();
 }
 
 void
@@ -78,9 +75,17 @@ OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
   , decodedOutputTxt(decodedTxt)
   , diagram(chart)
 {
-    decodeConfigsFile = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName();
+    decodeConfigsFile  = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName();
+    decodeConfigsFile2 = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName2();
+
     assert(decodeConfigsFile != QString{});
-    GetDecodeConfigsFromFile();
+
+    if (decodeConfigsFile2 != QString{}) {
+        GetDecodeConfigsFromFile2();
+    }
+    else {
+        GetDecodeConfigsFromFile();
+    }
 
     if (diagram->isInitialized)
         return;
@@ -93,40 +98,18 @@ OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
     diagram->chart->addAxis(diagram->yaxis, Qt::AlignLeft);
     diagram->chart->addAxis(diagram->xaxis, Qt::AlignBottom);
 
-    auto valuesRange = 50;
+    auto valuesRange = 400;
 
     diagram->yaxis->setRange(0, valuesRange);
-    diagram->xaxis->setRange(0, valuesRange);
+    diagram->xaxis->setRange(0, 10);
 
-    //diagram->series = new QLineSeries;
-    //diagram->series->setPen(QPen(QColor(Qt::GlobalColor::black)));
-    //diagram->series->setMarkerSize(60);
-
-    //auto marker = new QImage(30, 60, QImage::Format::Format_ARGB32);
-    //auto painte = new QPainter(marker);
-
-    //painte->setBrush(QBrush(QColor(250, 0, 0, 250)));
-    //painte->drawRect(0, 0, 30, 60);
-    //painte->rotate(-10);
-    //painte->setBrush(QBrush(QColor(255, 255, 255, 255)));
-    //painte->setPen(QColor(255, 255, 255, 255));
-    //painte->drawText(QPoint(0, 50), "Dupa123456");
-    //painte->rotate(30);
-
-    //diagram->series->setLightMarker(*marker);
-    //diagram->chart->addSeries(diagram->series);
-    //diagram->series->attachAxis(diagram->xaxis);
-    //diagram->series->attachAxis(diagram->yaxis);
-    
+    diagram->yaxis->setTickInterval(10);
     diagram->isInitialized = true;
+
+    diagram->startOfOperation = QDateTime::currentDateTime();
 }
 
-OutputThread::~OutputThread()
-{
-    // delete diagram->xaxis;
-    // delete diagram->yaxis;
-    // delete diagram->series;
-}
+OutputThread::~OutputThread() { }
 
 void
 OutputThread::AddLabelToDiagram(int labelIdx)
@@ -134,64 +117,56 @@ OutputThread::AddLabelToDiagram(int labelIdx)
     if (diagram->labelsSeries.contains(labelIdx))
         return;
 
-    auto &series = diagram->labelsSeries[labelIdx];
-
-    
-
-    auto labelMarker = new QImage(80, 80, QImage::Format::Format_ARGB32);
-    auto painter = new QPainter(labelMarker);
-
+    auto &series      = diagram->labelsSeries[labelIdx];
+    auto  labelMarker = new QImage(80, 80, QImage::Format::Format_ARGB32);
     labelMarker->fill(QColor(0, 0, 0, 0));
-    painter->setBrush(QBrush(QColor(rand() % 255, rand() % 255, rand() % 255, 255)));
-    painter->setBackground(QBrush(QColor(255,255,255,0)));
-    painter->drawRect(QRect(0, 0, 10, 80));
 
-    series.setMarkerSize(80);
+    QPainter painter(labelMarker);
+
+    painter.setBrush(QBrush(QColor(rand() % 255, rand() % 255, rand() % 255, 255)));
+    painter.setBackground(QBrush(QColor(255, 255, 255, 0)));
+    painter.drawRect(QRect(0, 0, 20, 40));
+
+    painter.rotate(-90);
+    painter.setBrush(QBrush(QColor(255, 255, 255, 255)));
+    painter.drawText(QPoint(-40, 10), QString::number(labelIdx));
+    // painter.rotate(80);
+
+    series.setMarkerSize(70);
     series.setLightMarker(*labelMarker);
-    //series->setPen(QPen(QColor(Qt::GlobalColor::black)));
-    //series->setBrush(QBrush(*labelMarker));
+
+    series.setPen(QPen(QColor(0, 0, 0, 0)));
+
+    // series->setBrush(QBrush(*labelMarker));
 
     diagram->chart->addSeries(&diagram->labelsSeries[labelIdx]);
 
     series.attachAxis(diagram->yaxis);
     series.attachAxis(diagram->xaxis);
-
 }
 
 void
 OutputThread::ShowDiagram()
 {
-    auto data = messages.back();
-
-    auto time    = QTime::currentTime();
-    auto rawTime = time.minute() * 6000 + time.second() * 100 + time.msec() / 10;
+    auto  data = messages.back();
+    qreal secondsFromStart =
+      (-1) * static_cast<qreal>(QDateTime::currentDateTime().msecsTo(diagram->startOfOperation)) / 1000;
 
     if (!diagram->labelsSeries.contains(data.labelRaw))
         AddLabelToDiagram(data.labelRaw);
-    
-    diagram->labelsSeries[data.labelRaw].append(QPointF(rawTime, data.labelRaw));
+
+    diagram->labelsSeries[data.labelRaw].append(QPointF(secondsFromStart, data.labelRaw));
 
     if (diagram->yaxis->max() < data.labelRaw) {
         diagram->yaxis->setMax(data.labelRaw + 50);
     }
 
-    if (diagram->xaxis->max() < rawTime) {
-        diagram->xaxis->setMax(rawTime + 500);
-        diagram->xaxis->setMin(rawTime - 1000);
+    if (diagram->xaxis->max() < secondsFromStart) {
+        diagram->xaxis->setMax(secondsFromStart + 5);
+        diagram->xaxis->setMin(secondsFromStart - 10);
     }
 
-    Beep(data.labelRaw * 4, 50);
-
-    //diagram->series->append(QPointF(rawTime, data.valueRaw));
-
-    //if (diagram->yaxis->max() < data.valueRaw) {
-    //    diagram->yaxis->setMax(data.valueRaw + (diagram->yaxis->max() - diagram->yaxis->min() / 5));
-    //}
-
-    //if (diagram->xaxis->max() < rawTime) {
-    //    diagram->xaxis->setMax(rawTime + 5);
-    //    diagram->xaxis->setMin(rawTime - 10);
-    //}
+    // Beep(data.labelRaw * 4, 50);
 }
 
 void
@@ -207,8 +182,17 @@ OutputThread::ShowNormalizedRawData(auto data)
     decodedOut.append(" Label ");
     decodedOut.append(QString::number(decoded.labelRaw));
 
+    decodedOut.append(" SDI: ");
+    decodedOut.append(QString::number(decoded.SDI));
+
     decodedOut.append(" Data ");
     decodedOut.append(QString::number(decoded.valueRaw));
+
+    decodedOut.append(" SSM: ");
+    decodedOut.append(QString::number(decoded.SSM));
+
+    decodedOut.append(" Parity: ");
+    decodedOut.append(QString::number(decoded.parity));
 
     decodedOut.append(" Time ");
     decodedOut.append(QString::number(decoded.timeRaw));
@@ -348,6 +332,100 @@ DecodedData::GetDecodeConfigsFromFile()
 }
 
 void
+DecodedData::GetDecodeConfigsFromFile2()
+{
+    auto jsonfile = QFile{ decodeConfigsFile2 };
+    jsonfile.open(QIODeviceBase::OpenModeFlag::ReadOnly);
+    auto fileContents = jsonfile.readAll();
+    jsonfile.close();
+
+    DTMsgAnatomy.clear();
+
+    QJsonParseError err;
+    QJsonDocument   jsondoc{ QJsonDocument::fromJson(fileContents, &err) };
+
+    if (err.error != QJsonParseError::NoError) {
+        QMessageBox errorMsg{ QMessageBox::Warning,
+                              "Json file Error",
+                              "Error occured during json file \" " + decodeConfigsFile2 +
+                                "\" opening, Error: " + err.errorString() };
+
+        assert(0);
+        exit(-1);
+    }
+
+    auto mainObj   = jsondoc.object();
+    auto configObj = mainObj["Configurations"].toObject();
+
+    auto msgChunkNames         = configObj["Message parts names"].toArray();
+    auto msgChunkNumber        = configObj["Message parts number"].toInt();
+    auto msgLenBytes           = configObj["Message length bytes"].toInt();
+    auto msgLenBits_calculated = msgLenBytes * 8 - 1;
+
+    auto chunks = configObj["Parts"].toObject();
+
+    DTMsgAnatomy.clear();
+
+    for (auto chunkName : msgChunkNames) {
+        auto configs = chunks[chunkName.toString()].toObject();
+
+        DTMsgElement2 chunk;
+        chunk.activeBits.first  = configs["Bit start"].toInt();
+        chunk.activeBits.second = configs["Bit end"].toInt();
+
+        if (chunk.activeBits.first > chunk.activeBits.second) {
+            QMessageBox errorMsg{
+                QMessageBox::Critical,
+                "Json file Error",
+                "Message part with name " + chunkName.toString() + "has starting bit number higher than ending bit number"
+
+            };
+
+            anatomyIsConfigured = false;
+            return;
+        }
+
+        if (chunk.activeBits.second > msgLenBits_calculated || chunk.activeBits.first > msgLenBits_calculated) {
+            QMessageBox errorMsg{
+                QMessageBox::Critical,
+                "Json file Error",
+                "Message part with name: " + chunkName.toString() +
+                  " has active bits number exceeding number of bits calculated from \"Mesaage length bytes\""
+            };
+
+            anatomyIsConfigured = false;
+            return;
+        }
+
+        chunk.bitOrder = configs["Reverse?"].toBool() ? DTMsgElement2::BitOrder::REVERSE : DTMsgElement2::BitOrder::NORMAL;
+        auto format    = configs["Encoding"].toString();
+
+        if (format == "BIN")
+            chunk.dataFormat = DTMsgElement2::DataFormat::BIN;
+        else if (format == "DEC")
+            chunk.dataFormat = DTMsgElement2::DataFormat::DEC;
+        else if (format == "OCT")
+            chunk.dataFormat = DTMsgElement2::DataFormat::OCT;
+        else if (format == "HEX")
+            chunk.dataFormat = DTMsgElement2::DataFormat::HEX;
+        else if (format == "BCD")
+            chunk.dataFormat = DTMsgElement2::DataFormat::BCD;
+        else {
+            chunk.dataFormat = DTMsgElement2::DataFormat::UNDEFINED;
+
+            QMessageBox error{ QMessageBox::Critical,
+                               "Json file Error",
+                               "Message part with name: " + chunkName.toString() +
+                                 " has undefined encoding. Valid types are: BIN, DEC, OCT, HEX, BCD" };
+        }
+
+        DTMsgAnatomy[chunkName.toString()] = std::move(chunk);
+    }
+
+    anatomyIsConfigured = true;
+}
+
+void
 DecodedData::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTMsgElement &elemStructure, auto &container)
 {
     assert(elemStructure.length > 0);
@@ -382,15 +460,119 @@ DecodedData::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTMsgEle
     }
 }
 
+// void
+// DecodedData::NormalizeAndStoreMsgItem2(std::shared_ptr<dataPacket> data, DTMsgElement2 &configs, auto &container)
+//{
+//     auto firstByteNum = configs.activeBits.first / 8;
+//     auto lastByteNum  = configs.activeBits.second / 8;
+//
+//     container                   = 0;
+//     auto alignBitsNum           = configs.activeBits.first % 8;
+//     auto firstByteFirstBitNum   = configs.activeBits.first % 8;
+//     auto firstByteActiveBitsNum = 8 - firstByteFirstBitNum;
+//     auto lastByteLastBitNum     = configs.activeBits.second % 8;
+//
+//     for (int i = firstByteNum; i <= lastByteNum; i++) {
+//         uint8_t byte = data->data.at(i);
+//
+//         if (i == firstByteNum) {
+//             byte &= ((1 << firstByteActiveBitsNum) - 1) << firstByteFirstBitNum;
+//         }
+//         else if (i == lastByteNum) {
+//             byte &= (1 << (lastByteLastBitNum + 1)) - 1;
+//         }
+//
+//         if (configs.bitOrder == DTMsgElement2::BitOrder::REVERSE) {
+//             byte = DTMsgElement2::convertToReverseBits(byte);
+//
+//             if (i == firstByteNum) {
+//                 byte = byte << firstByteFirstBitNum;
+//             }
+//             else if (i == lastByteNum) {
+//                 byte = byte >> (7 - lastByteLastBitNum);
+//             }
+//         }
+//
+//         auto leftShiftBitsNum = (i - firstByteNum) * 8 - firstByteFirstBitNum;
+//
+//         if (i == firstByteNum) {
+//             container |= byte >> firstByteFirstBitNum;
+//         }
+//         else {
+//             container |= byte << leftShiftBitsNum;
+//         }
+//     }
+// }
+
+void
+DecodedData::NormalizeAndStoreMsgItem2(std::shared_ptr<dataPacket> data, DTMsgElement2 &configs, auto &container)
+{
+    auto firstByteNum = configs.activeBits.first / 8;
+    auto lastByteNum  = configs.activeBits.second / 8;
+
+    //auto byteCounter = (firstByteNum < lastByteNum) ? 0 : lastByteNum;
+    //auto byteCounterIncr = (firstByteNum < lastByteNum) ? 1 : lastByteNum;
+
+    container                   = 0;
+    auto alignBitsNum           = configs.activeBits.first % 8;
+    auto firstByteFirstBitNum   = configs.activeBits.first % 8;
+    auto firstByteActiveBitsNum = 8 - firstByteFirstBitNum;
+    auto lastByteLastBitNum     = configs.activeBits.second % 8;
+
+    auto     bitsNumber  = configs.activeBits.second - configs.activeBits.first + 1;
+    auto     firstBitNum = configs.activeBits.first % 8;
+    uint64_t globalMask  = ((1 << bitsNumber) - 1) << firstBitNum;
+
+    for (int i = firstByteNum; i <= lastByteNum; i++) {
+        auto byte = static_cast<uint8_t>(data->data.at(i));
+
+        if (configs.bitOrder == DTMsgElement2::BitOrder::REVERSE) {
+            byte = DTMsgElement2::convertToReverseBits(byte);
+        }
+
+        uint8_t maskForThisByte = globalMask >> ((i - firstByteNum) * 8);
+        byte &= maskForThisByte;
+
+        auto leftShiftBitsNum = (i - firstByteNum) * 8 - firstByteFirstBitNum;
+
+        if (i == firstByteNum) {
+            container |= byte >> firstByteFirstBitNum & 0xff;
+        }
+        else {
+            container |= (byte & 0xff) << leftShiftBitsNum;
+        }
+    }
+}
+
 void
 DecodedData::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 {
     ArincMessage msg;
 
-    NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Channel"], msg.channel);
-    NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Label"], msg.labelRaw);
-    NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Data"], msg.valueRaw);
-    NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Time"], msg.timeRaw);
+    if (decodeConfigsFile2 != QString{}) {
+        msg.timeArrivalPC = rawData->msg_arrival_time;
+
+        for (auto &msgChunk : DTMsgAnatomy) {
+            if (msgChunk.second.activeBits.first / 8 >= rawData->bytes_in_buffer ||
+                msgChunk.second.activeBits.second / 8 >= rawData->bytes_in_buffer) {
+                QMessageBox err{ QMessageBox::Critical, "Data read error", "Not enough bytes in buffer" };
+            }
+        }
+
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Channel"], msg.channel);
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Label"], msg.labelRaw);
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["SDI"], msg.SDI);
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Data"], msg.valueRaw);
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["SSM"], msg.SSM);
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Parity"], msg.parity);
+        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Time"], msg.timeRaw);
+    }
+    else {
+        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Channel"], msg.channel);
+        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Label"], msg.labelRaw);
+        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Data"], msg.valueRaw);
+        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Time"], msg.timeRaw);
+    }
 
     messages.push_back(msg);
 }

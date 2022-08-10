@@ -57,16 +57,20 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    if (readerThr != nullptr && readerThr->isRunning()) {
-        readerThr->quit();
-        readerThr->wait();
-        readerThr = nullptr;
+    if (readerThr != nullptr) {
+        if (readerThr->isRunning()) {
+            readerThr->quit();
+            readerThr->wait();
+            readerThr = nullptr;
+        }
     }
 
-    if (writerThr != nullptr && writerThr->isRunning()) {
-        writerThr->quit();
-        writerThr->wait();
-        writerThr = nullptr;
+    if (writerThr != nullptr) {
+        if (writerThr->isRunning()) {
+            writerThr->quit();
+            writerThr->wait();
+            writerThr = nullptr;
+        }
     }
 
     databridgeData.clear();

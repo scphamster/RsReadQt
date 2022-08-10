@@ -4,6 +4,15 @@
 #include "ui_serialconfig.h"
 #include "Serial.h"
 
+#ifndef DEBUG
+#ifdef assert
+#undef assert
+#endif
+
+#define assert(__expr) __expr
+#endif   // DEBUG
+
+
 template<typename ConfigsT>
 class Configurator {
   public:
@@ -35,6 +44,7 @@ class SerialConfig : public QDialog,
     void OnSelparitySelected(const QString &newSelection);
     void OnMsgLenValueChanged(int value);
     void OnSpecifyFileWithSettings();
+    void OnSpecifyFileWithSettings2();
 
     void OnApplyClick();
     void OnCancelClick();

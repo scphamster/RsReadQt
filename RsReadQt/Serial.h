@@ -14,6 +14,7 @@
 
 #include <QtGlobal>
 #include <QTranslator>
+#include <QTime>
 #include <qstring.h>
 #include "qmutex.h"
 #include <QMutexLocker>
@@ -31,7 +32,11 @@
 #endif
 #endif
 
+#ifdef DEBUG
 #define assert_msg(__cond, __msg) Q_ASSERT(__cond)
+#else
+#define assert_msg(__cond, __msg) __cond
+#endif
 
 constexpr int  SERIAL_DATA_BUFSIZE = 32;
 constexpr auto SERIAL_PORT_PREFIX  = "\\\\.\\";
@@ -206,12 +211,13 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
             QString portname = QStringLiteral("COM");
             portname.append(QString::number(i));
 
-            // TODO: cleanup after tests
-            auto port   = portname.toStdWString().c_str();
-            auto bufsze = sizeof(pathBuffer) / sizeof(pathBuffer[0]);
+            auto p = std::wstring(L"COM") + std::to_wstring(i);
 
-            DWORD portIsPresent =
-              QueryDosDevice(portname.toStdWString().c_str(), pathBuffer, sizeof(pathBuffer) / sizeof(pathBuffer[0]));
+            // TODO: cleanup after tests
+            // auto port = portname.toStdWString().c_str();
+            // auto bufsze = sizeof(pathBuffer) / sizeof(pathBuffer[0]);
+
+            DWORD portIsPresent = QueryDosDevice(p.c_str(), pathBuffer, sizeof(pathBuffer) / sizeof(pathBuffer[0]));
 
             if (portIsPresent != NotPresent)   // QueryDosDevice returns zero if it didn't find an object
             {
@@ -249,6 +255,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         return std::vector<single_config_t>{ port, baudrate, databits, stopbits, parity };
     }
     QString GetConfigsFileName() { return decodeConfigsFile; }
+    QString GetConfigsFileName2() { return decodeConfigsFile2; }
 
     using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::ConvToPairByValueIfAny;
 
@@ -266,7 +273,9 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         return true;
     }
     void                                SetConfigsFileName(const QString &name) { decodeConfigsFile = name; }
+    void                                SetConfigsFileName2(const QString &name) { decodeConfigsFile2 = name; }
     bool                                ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
+    bool                                ConfigsFileNameIsSpecified2() { return !decodeConfigsFile2.empty(); }
     static const inline single_config_t PORT_UNDEFINED{ PORT_NOT_SELECTED, _T("Undefined") };
 
     bool SetPortByName(const QString &portname) noexcept(
@@ -330,6 +339,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     single_config_t parity   = { SERIAL_PARITY_NONE, _T("NONE" ) };
     _Key            dataTrackMsgLen{ 8 };
     QString         decodeConfigsFile;
+    QString         decodeConfigsFile2;
 };
 
 using SerialConfigs = _SerialConfigs<int, QString>;
@@ -392,13 +402,13 @@ class deque_s {
 struct dataPacket {
     uint32_t          msg_counter     = 0;
     uint32_t          bytes_in_buffer = 0;
-    std::time_t       msg_arrival_time;
+    QTime             msg_arrival_time;
     std::vector<char> data{ 0 };
 
     dataPacket() = default;
-    dataPacket(size_t bufferLen, uint32_t msgN, std::time_t t)
+    dataPacket(size_t bufferLen, uint32_t msgN, QTime &&t)
       : msg_counter(msgN)
-      , msg_arrival_time(t)
+      , msg_arrival_time(std::move(t))
     {
         data.resize(bufferLen);
     }

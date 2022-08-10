@@ -1,0 +1,52 @@
+{
+	"Configurations" : {
+		"Message parts names" : [ "Channel", "Label", "SDI", "Data", "SSM", "Parity", "Time" ],
+		"Message parts number" : 5,
+		"Message length bytes" : 8,
+		"Parts" : {
+			"Channel" : {
+				"Bit start": 0,
+				"Bit end" : 7,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			},
+			"Label" : {
+				"Bit start": 8,
+				"Bit end" : 15,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			},
+			"SDI" : {
+				"Bit start": 16,
+				"Bit end" : 17,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			},
+			"Data" : {
+				"Bit start": 18,
+				"Bit end" : 36,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			},
+			"SSM" : {
+				"Bit start": 37,
+				"Bit end" : 38,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			},
+			"Parity" : {
+				"Bit start": 39,
+				"Bit end" : 39,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			},
+			"Time" : {
+				"Bit start": 40,
+				"Bit end" : 63,
+				"Reverse?" : false,
+				"Encoding" : "BIN"
+			}
+		}
+		
+	}
+}

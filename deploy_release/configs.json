@@ -1,0 +1,36 @@
+{
+	"Data structure" : {
+		"Message length" : 8,
+		"Message parts" : [ "Channel", "Label", "Data", "Time"],
+		"Channel" : {
+			"Length" : 1,
+			"Bit order" : "LSB",
+			"Active bits" : [ 0, 7],
+			"Byte index" : 0,
+			"Format" : "DEC"
+		},
+		"Label" : {
+			"Length" : 1,
+			"Bit order" : "LSB",
+			"Active bits" : [ 0, 7],
+			"Byte index" : 1,
+			"Format" : "OCT"
+		},
+		"Data" : {
+			"Length" : 3,
+			"Byte order" : "MSB",
+			"Bit order" : "LSB",
+			"Active bits" : [ 0, 23],
+			"Byte index" : 2,
+			"Format" : "BIN"
+		},
+		"Time" : {
+			"Length" : 3,
+			"Byte order" : "LSB",
+			"Bit order" : "LSB",
+			"Active bits" : [ 0, 23 ],
+			"Byte index" : 5,
+			"Format" : "BIN"
+		}
+	}
+} 

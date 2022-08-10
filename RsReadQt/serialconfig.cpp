@@ -27,6 +27,7 @@ SerialConfig::SerialConfig(std::shared_ptr<void> &databridgeConfigs, QWidget *pa
     connect(buttonAPPLY, &QPushButton::clicked, this, &SerialConfig::OnApplyClick);
     connect(spinboxMsgLen, &QSpinBox::valueChanged, this, &SerialConfig::OnMsgLenValueChanged);
     connect(selectFileButton, &QToolButton::clicked, this, &SerialConfig::OnSpecifyFileWithSettings);
+    connect(selectFileButton2, &QToolButton::clicked, this, &SerialConfig::OnSpecifyFileWithSettings2);
 
     Init();
 }
@@ -42,7 +43,6 @@ SerialConfig::SaveSettingsToSystem()
     {
         settings.setValue("Port", localSelections["Port"].first);
         settings.setValue("ConfigsFile", serialConfigs->GetConfigsFileName());
-
     }
     settings.endGroup();
 }
@@ -53,7 +53,7 @@ SerialConfig::RetreiveSettingsFromSystem()
     QSettings settings;
     settings.beginGroup(SERIAL_SYSTEMCONFIGS_NAME);
 
-    //TODO: add all settings
+    // TODO: add all settings
     if (settings.contains("Port")) {
         auto avlblPorts = serialConfigs->GetAvlblComPorts();
 
@@ -99,7 +99,7 @@ SerialConfig::Init()
     PutValuesToDropDown(dropdownSTOPBITS, serialConfigs->GetAvlblStopbits());
     PutValuesToDropDown(dropdownPARITY, serialConfigs->GetAvlblParities());
 
-    //these should be before data retreival because of event generated when spinbox data changes see OnMsgLenValueChanged
+    // these should be before data retreival because of event generated when spinbox data changes see OnMsgLenValueChanged
     spinboxMsgLen->setMinimum(SerialConfigs::avlblMsgLen.first);
     spinboxMsgLen->setMaximum(SerialConfigs::avlblMsgLen.second);
 
@@ -110,7 +110,7 @@ SerialConfig::Init()
     dropdownDATABITS->setCurrentText(localSelections["Databits"].second);
     dropdownSTOPBITS->setCurrentText(localSelections["Stopbits"].second);
     dropdownPARITY->setCurrentText(localSelections["Parity"].second);
-    
+
     spinboxMsgLen->setValue(localSelections["DeviceMsgLen"].first);
 }
 
@@ -194,6 +194,11 @@ SerialConfig::OnSpecifyFileWithSettings()
 {
     serialConfigs->SetConfigsFileName(QFileDialog::getOpenFileName(this, tr("Open configurations file"), "", tr("*.json")));
 
-    //TEST
+    // TEST
+}
 
+void
+SerialConfig::OnSpecifyFileWithSettings2()
+{
+    serialConfigs->SetConfigsFileName2(QFileDialog::getOpenFileName(this, tr("Open configurations file"), "", tr("*.json")));
 }

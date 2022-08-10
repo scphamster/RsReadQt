@@ -1,8 +1,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <vector>
 #include <ctime>
+
+#include "QString"
+#include <QTime>
+
 #include "Serial.h"
-#include "qstring.h"
 
 Serial::Serial(std::shared_ptr<_SerialConfigs<int, QString>> databridgeConfigs,
                deque_s<std::shared_ptr<dataPacket>>         &databidgeData)
@@ -23,10 +26,8 @@ Serial::Open()
 bool
 Serial::Read()
 {
-    std::time_t msgtime;
-
-    std::time(&msgtime);
-    auto newdata = std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(), data_packet_counter++, msgtime);
+    auto newdata =
+      std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(), data_packet_counter++, QTime::currentTime());
 
     auto ans = readBytes(newdata->data._Unchecked_begin(), newdata->data.size(), 0);
 
@@ -36,6 +37,7 @@ Serial::Read()
     }
 
     newdata->bytes_in_buffer = ans;
+
     databidgeData.push_back(newdata);
 
     return true;
@@ -63,7 +65,7 @@ QString
 Serial::ConvRawToString(std::shared_ptr<Serial::dataPacket> data_item)
 {
     QString retString;
-    //retString.append(data_item->data);
+    // retString.append(data_item->data);
 
     return retString;
 }
@@ -82,26 +84,28 @@ Serial::GetData()
 QString
 Serial::ConvRawToPrettyString(std::shared_ptr<dataPacket> data)
 {
-    char        buffer[100];
-    tm         *timeinfo  = new tm;
-    std::time_t arvl_time = data->msg_arrival_time;
+    //char        buffer[100];
+    //tm         *timeinfo  = new tm;
+    //std::time_t arvl_time = data->msg_arrival_time;
 
-    localtime_s(timeinfo, &arvl_time);
-    strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
-    QString retstr = "Data Arival Time: ";
-    retstr.append(buffer);
+    //localtime_s(timeinfo, &arvl_time);
+    //strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
+    //QString retstr = "Data Arival Time: ";
+    //retstr.append(buffer);
 
-    retstr.append("   Bytes in buffer: ");
-    retstr.append(std::to_wstring(data->bytes_in_buffer));
+    //retstr.append("   Bytes in buffer: ");
+    //retstr.append(std::to_wstring(data->bytes_in_buffer));
 
-    retstr.append("RawData: ");
+    //retstr.append("RawData: ");
 
-    for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
-        retstr.append(std::to_wstring((data->data[i])));
-        retstr.append(" ");
-    }
-    retstr.append("\n");
+    //for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
+    //    retstr.append(std::to_wstring((data->data[i])));
+    //    retstr.append(" ");
+    //}
+    //retstr.append("\n");
 
-    delete timeinfo;
-    return retstr;
+    //delete timeinfo;
+    //return retstr;
+
+    return QString{};
 }
