@@ -43,7 +43,6 @@ class SerialConfig : public QDialog,
     void OnSelstopbitsSelected(const QString &newSelection);
     void OnSelparitySelected(const QString &newSelection);
     void OnMsgLenValueChanged(int value);
-    void OnSpecifyFileWithSettings();
     void OnSpecifyFileWithSettings2();
 
     void OnApplyClick();

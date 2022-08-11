@@ -93,6 +93,6 @@ class MainWindow : public QMainWindow,
 
     ReadingThread  *readerThr = nullptr;
     OutputThread   *writerThr = nullptr;
-    DataChart       diagram;    
+    ArincLabelsChart       diagram;    
 
 };

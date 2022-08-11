@@ -54,38 +54,23 @@ ReadingThread::run()
     }
 }
 
-uint8_t
-DTMsgElement::reverseBits(uint8_t data)
-{
-    data = (data & 0xF0) >> 4 | (data & 0x0F) << 4;
-    data = (data & 0xCC) >> 2 | (data & 0x33) << 2;
-    data = (data & 0xAA) >> 1 | (data & 0x55) << 1;
-    return data;
-}
-
 OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
                            QPlainTextEdit                         *lhTxt,
                            QPlainTextEdit                         *rhTxt,
                            QPlainTextEdit                         *decodedTxt,
                            std::shared_ptr<void>                   dataBridgeConfigs,
-                           DataChart                              *chart)
+                           ArincLabelsChart                       *chart)
   : dataToOutput{ data }
   , rawOutputTxt{ lhTxt }
   , asciiOutputTxt{ rhTxt }
   , decodedOutputTxt(decodedTxt)
   , diagram(chart)
 {
-    decodeConfigsFile  = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName();
-    decodeConfigsFile2 = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName2();
+    decodeConfigsFile = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName();
 
     assert(decodeConfigsFile != QString{});
 
-    if (decodeConfigsFile2 != QString{}) {
-        GetDecodeConfigsFromFile2();
-    }
-    else {
-        GetDecodeConfigsFromFile();
-    }
+    GetDecodeConfigsFromFile();
 
     if (diagram->isInitialized)
         return;
@@ -148,9 +133,8 @@ OutputThread::AddLabelToDiagram(int labelIdx)
 void
 OutputThread::ShowDiagram()
 {
-    auto  data = messages.back();
-    qreal secondsFromStart =
-      (-1) * static_cast<qreal>(QDateTime::currentDateTime().msecsTo(diagram->startOfOperation)) / 1000;
+    auto  data             = messages.back();
+    qreal secondsFromStart = (-1) * static_cast<qreal>(data.timeArrivalPC.msecsTo(diagram->startOfOperation)) / 1000;
 
     if (!diagram->labelsSeries.contains(data.labelRaw))
         AddLabelToDiagram(data.labelRaw);
@@ -195,7 +179,7 @@ OutputThread::ShowNormalizedRawData(auto data)
     decodedOut.append(QString::number(decoded.parity));
 
     decodedOut.append(" Time ");
-    decodedOut.append(QString::number(decoded.timeRaw));
+    decodedOut.append(QString::number(decoded.DTtimeRaw));
 
     decodedOutputTxt->appendPlainText(decodedOut);
 }
@@ -223,7 +207,7 @@ OutputThread::ShowNewData(void)
     rawOutput.append("RawData: ");
     // TODO: use vector range for loop
     for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
-        rawOutput.append(QString::number((data->data[i])));
+        rawOutput.append(QString::number(static_cast<uchar>(data->data[i])));
         rawOutput.append(" ");
     }
 
@@ -268,73 +252,9 @@ OutputThread::SaveSession()
 }
 
 void
-DecodedData::GetDecodeConfigsFromFile()
+Arinc::GetDecodeConfigsFromFile()
 {
-    auto jsonFile = QFile(decodeConfigsFile);
-    jsonFile.setPermissions(QFileDevice::Permission::ReadGroup);
-    jsonFile.open(QIODeviceBase::OpenModeFlag::ReadOnly);
-    auto fileContents = jsonFile.readAll();
-    jsonFile.close();
-
-    DTMessageStructure.clear();
-
-    QJsonParseError err;
-    QJsonDocument   jsondoc{ QJsonDocument::fromJson(fileContents, &err) };
-
-    auto obj           = jsondoc.object();
-    auto dataStructure = obj["Data structure"].toObject();
-
-    auto bytesInMsg    = dataStructure.value("Message length");
-    auto msgElemsNames = dataStructure.value("Message parts").toArray();
-
-    for (auto name : msgElemsNames) {
-        DTMsgElement elem;
-        auto         elemConfigs = dataStructure.value(name.toString()).toObject();
-
-        elem.length = elemConfigs.value("Length").toInt();
-
-        if (elem.length > 1) {
-            if (elemConfigs.value("Byte order").toString() == "MSB") {
-                elem.byteOrder = DTMsgElement::ByteOrder::MSB;
-            }
-            else {
-                elem.byteOrder = DTMsgElement::ByteOrder::LSB;
-            }
-        }
-
-        if (elemConfigs.value("Bit order").toString() == "MSB") {
-            elem.bitOrder = DTMsgElement::BitOrder::MSB;
-        }
-        else {
-            elem.bitOrder = DTMsgElement::BitOrder::LSB;
-        }
-
-        auto activeBits        = elemConfigs.value("Active bits").toArray();
-        elem.activeBits.first  = activeBits.at(0).toInt();
-        elem.activeBits.second = activeBits.at(1).toInt();
-
-        elem.startbyte = elemConfigs.value("Byte index").toInt();
-
-        if (elemConfigs.value("Format").toString() == "BIN")
-            elem.dataFormat = DTMsgElement::DataFormat::BIN;
-        else if (elemConfigs.value("Format").toString() == "DEC")
-            elem.dataFormat = DTMsgElement::DataFormat::DEC;
-        else if (elemConfigs.value("Format").toString() == "OCT")
-            elem.dataFormat = DTMsgElement::DataFormat::OCT;
-        else if (elemConfigs.value("Format").toString() == "HEX")
-            elem.dataFormat = DTMsgElement::DataFormat::HEX;
-        else if (elemConfigs.value("Format").toString() == "BCD")
-            elem.dataFormat = DTMsgElement::DataFormat::BCD;
-
-        auto elemName                = name.toString();
-        DTMessageStructure[elemName] = std::move(elem);
-    }
-}
-
-void
-DecodedData::GetDecodeConfigsFromFile2()
-{
-    auto jsonfile = QFile{ decodeConfigsFile2 };
+    auto jsonfile = QFile{ decodeConfigsFile };
     jsonfile.open(QIODeviceBase::OpenModeFlag::ReadOnly);
     auto fileContents = jsonfile.readAll();
     jsonfile.close();
@@ -347,7 +267,7 @@ DecodedData::GetDecodeConfigsFromFile2()
     if (err.error != QJsonParseError::NoError) {
         QMessageBox errorMsg{ QMessageBox::Warning,
                               "Json file Error",
-                              "Error occured during json file \" " + decodeConfigsFile2 +
+                              "Error occured during json file \" " + decodeConfigsFile +
                                 "\" opening, Error: " + err.errorString() };
 
         assert(0);
@@ -369,7 +289,7 @@ DecodedData::GetDecodeConfigsFromFile2()
     for (auto chunkName : msgChunkNames) {
         auto configs = chunks[chunkName.toString()].toObject();
 
-        DTMsgElement2 chunk;
+        DTWordField chunk;
         chunk.activeBits.first  = configs["Bit start"].toInt();
         chunk.activeBits.second = configs["Bit end"].toInt();
 
@@ -397,21 +317,25 @@ DecodedData::GetDecodeConfigsFromFile2()
             return;
         }
 
-        chunk.bitOrder = configs["Reverse?"].toBool() ? DTMsgElement2::BitOrder::REVERSE : DTMsgElement2::BitOrder::NORMAL;
-        auto format    = configs["Encoding"].toString();
+        chunk.bitOrder =
+          configs["Reverse bits?"].toBool() ? DTWordField::BitOrder::REVERSE : DTWordField::BitOrder::NORMAL;
+        chunk.byteOrder =
+          configs["Reverse bytes?"].toBool() ? DTWordField::ByteOrder::REVERSE : DTWordField::ByteOrder::NORMAL;
+
+        auto format = configs["Encoding"].toString();
 
         if (format == "BIN")
-            chunk.dataFormat = DTMsgElement2::DataFormat::BIN;
+            chunk.dataFormat = DTWordField::DataFormat::BIN;
         else if (format == "DEC")
-            chunk.dataFormat = DTMsgElement2::DataFormat::DEC;
+            chunk.dataFormat = DTWordField::DataFormat::DEC;
         else if (format == "OCT")
-            chunk.dataFormat = DTMsgElement2::DataFormat::OCT;
+            chunk.dataFormat = DTWordField::DataFormat::OCT;
         else if (format == "HEX")
-            chunk.dataFormat = DTMsgElement2::DataFormat::HEX;
+            chunk.dataFormat = DTWordField::DataFormat::HEX;
         else if (format == "BCD")
-            chunk.dataFormat = DTMsgElement2::DataFormat::BCD;
+            chunk.dataFormat = DTWordField::DataFormat::BCD;
         else {
-            chunk.dataFormat = DTMsgElement2::DataFormat::UNDEFINED;
+            chunk.dataFormat = DTWordField::DataFormat::UNDEFINED;
 
             QMessageBox error{ QMessageBox::Critical,
                                "Json file Error",
@@ -425,131 +349,119 @@ DecodedData::GetDecodeConfigsFromFile2()
     anatomyIsConfigured = true;
 }
 
-void
-DecodedData::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTMsgElement &elemStructure, auto &container)
-{
-    assert(elemStructure.length > 0);
-    assert(elemStructure.activeBits.first < elemStructure.activeBits.second);
-    assert(elemStructure.startbyte >= 0 && elemStructure.startbyte < data->bytes_in_buffer);
-
-    container = 0;
-
-    auto reordreBitsBytes = [&elemStructure, &container](auto &iterator) {
-        for (int i = 0; i < elemStructure.length; i++) {
-            uint8_t byte;
-
-            if (elemStructure.bitOrder == DTMsgElement::BitOrder::MSB) {
-                byte = DTMsgElement::reverseBits(*iterator);
-            }
-            else
-                byte = *iterator;
-
-            container |= byte << (i * 8);
-            iterator++;
-        }
-    };
-
-    if (elemStructure.byteOrder == DTMsgElement::ByteOrder::MSB && elemStructure.length > 1) {
-        auto iterator =
-          std::make_reverse_iterator(data->data.begin() + elemStructure.startbyte + (elemStructure.length - 1)) - 1;
-        reordreBitsBytes(iterator);
-    }
-    else {
-        auto iterator = data->data.begin() + elemStructure.startbyte;
-        reordreBitsBytes(iterator);
-    }
-}
-
 // void
-// DecodedData::NormalizeAndStoreMsgItem2(std::shared_ptr<dataPacket> data, DTMsgElement2 &configs, auto &container)
+// Arinc::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
 //{
 //     auto firstByteNum = configs.activeBits.first / 8;
 //     auto lastByteNum  = configs.activeBits.second / 8;
 //
-//     container                   = 0;
-//     auto alignBitsNum           = configs.activeBits.first % 8;
-//     auto firstByteFirstBitNum   = configs.activeBits.first % 8;
+//     auto byteCounter     = (firstByteNum <= lastByteNum) ? 0 : lastByteNum;
+//     auto byteCounterIncr = (firstByteNum <= lastByteNum) ? 1 : lastByteNum;
+//
+//     auto firstByteFirstBitNum =
+//       (firstByteNum <= lastByteNum) ? configs.activeBits.first % 8 : configs.activeBits.second % 8;
 //     auto firstByteActiveBitsNum = 8 - firstByteFirstBitNum;
 //     auto lastByteLastBitNum     = configs.activeBits.second % 8;
 //
-//     for (int i = firstByteNum; i <= lastByteNum; i++) {
-//         uint8_t byte = data->data.at(i);
+//     auto     bitsNumber  = configs.activeBits.second - configs.activeBits.first + 1;
+//     auto     firstBitNum = (firstByteNum <= lastByteNum) ? configs.activeBits.first % 8 : configs.activeBits.second % 8;
+//     uint64_t globalMask  = ((1 << bitsNumber) - 1) << firstBitNum;
+//
+//     container = 0;
+//     for (int i = firstByteNum; true; i++) {
+//         auto byte    = static_cast<uint8_t>(data->data.at(i));
+//         auto byteNum = i - firstByteNum;
+//
+//         if (configs.bitOrder == DTWordField::BitOrder::REVERSE) {
+//             byte = DTWordField::reverseBitsInByte(byte);
+//         }
+//
+//         uint8_t maskForThisByte = globalMask >> (byteNum * 8);
+//         byte &= maskForThisByte;
+//
+//         auto leftShiftBitsNum = byteNum * 8 - firstByteFirstBitNum;
 //
 //         if (i == firstByteNum) {
-//             byte &= ((1 << firstByteActiveBitsNum) - 1) << firstByteFirstBitNum;
-//         }
-//         else if (i == lastByteNum) {
-//             byte &= (1 << (lastByteLastBitNum + 1)) - 1;
-//         }
-//
-//         if (configs.bitOrder == DTMsgElement2::BitOrder::REVERSE) {
-//             byte = DTMsgElement2::convertToReverseBits(byte);
-//
-//             if (i == firstByteNum) {
-//                 byte = byte << firstByteFirstBitNum;
-//             }
-//             else if (i == lastByteNum) {
-//                 byte = byte >> (7 - lastByteLastBitNum);
-//             }
-//         }
-//
-//         auto leftShiftBitsNum = (i - firstByteNum) * 8 - firstByteFirstBitNum;
-//
-//         if (i == firstByteNum) {
-//             container |= byte >> firstByteFirstBitNum;
+//             container |= byte >> firstByteFirstBitNum & 0xff;
 //         }
 //         else {
-//             container |= byte << leftShiftBitsNum;
+//             container |= (byte & 0xff) << leftShiftBitsNum;
 //         }
+//
+//         if (i == lastByteNum)
+//             break;
 //     }
 // }
 
 void
-DecodedData::NormalizeAndStoreMsgItem2(std::shared_ptr<dataPacket> data, DTMsgElement2 &configs, auto &container)
+Arinc::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
 {
     auto firstByteNum = configs.activeBits.first / 8;
     auto lastByteNum  = configs.activeBits.second / 8;
+    int  incrementor;
+    int  byteNumber = 0;
 
-    //auto byteCounter = (firstByteNum < lastByteNum) ? 0 : lastByteNum;
-    //auto byteCounterIncr = (firstByteNum < lastByteNum) ? 1 : lastByteNum;
+    if (configs.byteOrder == DTWordField::ByteOrder::NORMAL) {
+        incrementor = 1;
+    }
+    else {
+        incrementor = -1;
 
-    container                   = 0;
-    auto alignBitsNum           = configs.activeBits.first % 8;
-    auto firstByteFirstBitNum   = configs.activeBits.first % 8;
-    auto firstByteActiveBitsNum = 8 - firstByteFirstBitNum;
-    auto lastByteLastBitNum     = configs.activeBits.second % 8;
+        auto temp    = firstByteNum;
+        firstByteNum = lastByteNum;
+        lastByteNum  = temp;
+    }
 
-    auto     bitsNumber  = configs.activeBits.second - configs.activeBits.first + 1;
-    auto     firstBitNum = configs.activeBits.first % 8;
-    uint64_t globalMask  = ((1 << bitsNumber) - 1) << firstBitNum;
+    container = 0;
+    for (int i = firstByteNum; true; i += incrementor) {
+        auto byte    = static_cast<uint8_t>(data->data.at(i));
+        auto byteNum = i - firstByteNum;
 
-    for (int i = firstByteNum; i <= lastByteNum; i++) {
-        auto byte = static_cast<uint8_t>(data->data.at(i));
-
-        if (configs.bitOrder == DTMsgElement2::BitOrder::REVERSE) {
-            byte = DTMsgElement2::convertToReverseBits(byte);
+        if (configs.bitOrder == DTWordField::BitOrder::REVERSE) {
+            byte = DTWordField::reverseBitsInByte(byte);
         }
 
-        uint8_t maskForThisByte = globalMask >> ((i - firstByteNum) * 8);
-        byte &= maskForThisByte;
+        container |= byte << (byteNumber * 8);
 
-        auto leftShiftBitsNum = (i - firstByteNum) * 8 - firstByteFirstBitNum;
+        byteNumber ++;
 
-        if (i == firstByteNum) {
-            container |= byte >> firstByteFirstBitNum & 0xff;
-        }
-        else {
-            container |= (byte & 0xff) << leftShiftBitsNum;
-        }
+        if (i == lastByteNum)
+            break;
+    }
+
+    auto     activeBitsNum = configs.activeBits.second - configs.activeBits.first + 1;
+    uint64_t mask          = (1 << activeBitsNum) - 1;
+
+    if (configs.byteOrder == DTWordField::ByteOrder::NORMAL) {
+        auto firstByteFirstBitNum = configs.activeBits.first % 8;
+
+        container >>= firstByteFirstBitNum;
+        container &= mask;
+    }
+    else {
+        uint64_t allButFirst = container & 0xFFffFFff00UL;
+
+        auto lastByteUnusedBitsNum = configs.activeBits.first % 8;
+        auto bytesNum              = firstByteNum - lastByteNum;
+
+        uint64_t lastByte = container & (0xFF << (bytesNum * 8));
+        lastByte >>= lastByteUnusedBitsNum;
+
+        container &= ~(0xFF << (bytesNum * 8));
+        container |= lastByte;
+
+        auto firstByteUnusedBitsNum = 7 - configs.activeBits.second % 8;
+        container >>= firstByteUnusedBitsNum;
+
+        container &= mask;
     }
 }
 
 void
-DecodedData::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
+Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 {
-    ArincMessage msg;
-
-    if (decodeConfigsFile2 != QString{}) {
+    ArincMsg msg;
+    if (decodeConfigsFile != QString{}) {
         msg.timeArrivalPC = rawData->msg_arrival_time;
 
         for (auto &msgChunk : DTMsgAnatomy) {
@@ -559,19 +471,13 @@ DecodedData::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
             }
         }
 
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Channel"], msg.channel);
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Label"], msg.labelRaw);
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["SDI"], msg.SDI);
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Data"], msg.valueRaw);
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["SSM"], msg.SSM);
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Parity"], msg.parity);
-        NormalizeAndStoreMsgItem2(rawData, DTMsgAnatomy["Time"], msg.timeRaw);
-    }
-    else {
-        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Channel"], msg.channel);
-        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Label"], msg.labelRaw);
-        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Data"], msg.valueRaw);
-        NormalizeAndStoreMsgItem(rawData, DTMessageStructure["Time"], msg.timeRaw);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["Channel"], msg.channel);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["Label"], msg.labelRaw);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["SDI"], msg.SDI);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["Data"], msg.valueRaw);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["SSM"], msg.SSM);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["Parity"], msg.parity);
+        NormalizeAndStoreMsgItem(rawData, DTMsgAnatomy["Time"], msg.DTtimeRaw);
     }
 
     messages.push_back(msg);

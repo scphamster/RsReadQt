@@ -26,8 +26,9 @@ Serial::Open()
 bool
 Serial::Read()
 {
-    auto newdata =
-      std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(), data_packet_counter++, QTime::currentTime());
+    auto newdata = std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(),
+                                                data_packet_counter++,
+                                                QDateTime::currentDateTime());
 
     auto ans = readBytes(newdata->data._Unchecked_begin(), newdata->data.size(), 0);
 
@@ -84,28 +85,28 @@ Serial::GetData()
 QString
 Serial::ConvRawToPrettyString(std::shared_ptr<dataPacket> data)
 {
-    //char        buffer[100];
-    //tm         *timeinfo  = new tm;
-    //std::time_t arvl_time = data->msg_arrival_time;
+    // char        buffer[100];
+    // tm         *timeinfo  = new tm;
+    // std::time_t arvl_time = data->msg_arrival_time;
 
-    //localtime_s(timeinfo, &arvl_time);
-    //strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
-    //QString retstr = "Data Arival Time: ";
-    //retstr.append(buffer);
+    // localtime_s(timeinfo, &arvl_time);
+    // strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
+    // QString retstr = "Data Arival Time: ";
+    // retstr.append(buffer);
 
-    //retstr.append("   Bytes in buffer: ");
-    //retstr.append(std::to_wstring(data->bytes_in_buffer));
+    // retstr.append("   Bytes in buffer: ");
+    // retstr.append(std::to_wstring(data->bytes_in_buffer));
 
-    //retstr.append("RawData: ");
+    // retstr.append("RawData: ");
 
-    //for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
-    //    retstr.append(std::to_wstring((data->data[i])));
-    //    retstr.append(" ");
-    //}
-    //retstr.append("\n");
+    // for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
+    //     retstr.append(std::to_wstring((data->data[i])));
+    //     retstr.append(" ");
+    // }
+    // retstr.append("\n");
 
-    //delete timeinfo;
-    //return retstr;
+    // delete timeinfo;
+    // return retstr;
 
     return QString{};
 }

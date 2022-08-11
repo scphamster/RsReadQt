@@ -254,8 +254,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     {
         return std::vector<single_config_t>{ port, baudrate, databits, stopbits, parity };
     }
-    QString GetConfigsFileName() { return decodeConfigsFile; }
-    QString GetConfigsFileName2() { return decodeConfigsFile2; }
+    QString GetConfigsFileName() { return decodeConfigsFile2; }
 
     using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::ConvToPairByValueIfAny;
 
@@ -272,9 +271,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
         dataTrackMsgLen = newMsgLen;
         return true;
     }
-    void                                SetConfigsFileName(const QString &name) { decodeConfigsFile = name; }
     void                                SetConfigsFileName2(const QString &name) { decodeConfigsFile2 = name; }
-    bool                                ConfigsFileNameIsSpecified() { return !decodeConfigsFile.empty(); }
     bool                                ConfigsFileNameIsSpecified2() { return !decodeConfigsFile2.empty(); }
     static const inline single_config_t PORT_UNDEFINED{ PORT_NOT_SELECTED, _T("Undefined") };
 
@@ -338,7 +335,6 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     single_config_t stopbits = { SERIAL_STOPBITS_1, _T("1" ) };
     single_config_t parity   = { SERIAL_PARITY_NONE, _T("NONE" ) };
     _Key            dataTrackMsgLen{ 8 };
-    QString         decodeConfigsFile;
     QString         decodeConfigsFile2;
 };
 
@@ -402,11 +398,11 @@ class deque_s {
 struct dataPacket {
     uint32_t          msg_counter     = 0;
     uint32_t          bytes_in_buffer = 0;
-    QTime             msg_arrival_time;
+    QDateTime             msg_arrival_time;
     std::vector<char> data{ 0 };
 
     dataPacket() = default;
-    dataPacket(size_t bufferLen, uint32_t msgN, QTime &&t)
+    dataPacket(size_t bufferLen, uint32_t msgN, QDateTime &&t)
       : msg_counter(msgN)
       , msg_arrival_time(std::move(t))
     {

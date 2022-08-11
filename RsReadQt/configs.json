@@ -1,36 +1,59 @@
 {
-	"Data structure" : {
-		"Message length" : 8,
-		"Message parts" : [ "Channel", "Label", "Data", "Time"],
-		"Channel" : {
-			"Length" : 1,
-			"Bit order" : "LSB",
-			"Active bits" : [ 0, 7],
-			"Byte index" : 0,
-			"Format" : "DEC"
-		},
-		"Label" : {
-			"Length" : 1,
-			"Bit order" : "LSB",
-			"Active bits" : [ 0, 7],
-			"Byte index" : 1,
-			"Format" : "OCT"
-		},
-		"Data" : {
-			"Length" : 3,
-			"Byte order" : "MSB",
-			"Bit order" : "LSB",
-			"Active bits" : [ 0, 23],
-			"Byte index" : 2,
-			"Format" : "BIN"
-		},
-		"Time" : {
-			"Length" : 3,
-			"Byte order" : "LSB",
-			"Bit order" : "LSB",
-			"Active bits" : [ 0, 23 ],
-			"Byte index" : 5,
-			"Format" : "BIN"
+	"Configurations" : {
+		"Message parts names" : [ "Channel", "Label", "SDI", "Data", "SSM", "Parity", "Time" ],
+		"Message parts number" : 5,
+		"Message length bytes" : 8,
+		"Parts" : {
+			"Channel" : {
+				"Bit start": 0,
+				"Bit end" : 7,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			},
+			"Label" : {
+				"Bit start": 8,
+				"Bit end" : 15,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			},
+			"SDI" : {
+				"Bit start": 16,
+				"Bit end" : 17,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			},
+			"Data" : {
+				"Bit start": 18,
+				"Bit end" : 36,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			},
+			"SSM" : {
+				"Bit start": 37,
+				"Bit end" : 38,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			},
+			"Parity" : {
+				"Bit start": 39,
+				"Bit end" : 39,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			},
+			"Time" : {
+				"Bit start": 40,
+				"Bit end" : 63,
+				"Reverse bits?" : false,
+				"Reverse bytes?" : false,
+				"Encoding" : "BIN"
+			}
 		}
+		
 	}
-} 
+}

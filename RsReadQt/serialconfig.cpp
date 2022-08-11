@@ -26,7 +26,6 @@ SerialConfig::SerialConfig(std::shared_ptr<void> &databridgeConfigs, QWidget *pa
     connect(dropdownPARITY, &QComboBox::currentTextChanged, this, &SerialConfig::OnSelparitySelected);
     connect(buttonAPPLY, &QPushButton::clicked, this, &SerialConfig::OnApplyClick);
     connect(spinboxMsgLen, &QSpinBox::valueChanged, this, &SerialConfig::OnMsgLenValueChanged);
-    connect(selectFileButton, &QToolButton::clicked, this, &SerialConfig::OnSpecifyFileWithSettings);
     connect(selectFileButton2, &QToolButton::clicked, this, &SerialConfig::OnSpecifyFileWithSettings2);
 
     Init();
@@ -75,7 +74,7 @@ SerialConfig::RetreiveSettingsFromSystem()
     }
 
     if (settings.contains("ConfigsFile")) {
-        serialConfigs->SetConfigsFileName(settings.value("ConfigsFile").toString());
+        serialConfigs->SetConfigsFileName2(settings.value("ConfigsFile").toString());
     }
 
     localSelections["Baudrate"]     = serialConfigs->GetSelectedBaudrate();
@@ -187,14 +186,6 @@ void
 SerialConfig::OnMsgLenValueChanged(int value)
 {
     localSelections["DeviceMsgLen"] = { value, QString::number(value) };
-}
-
-void
-SerialConfig::OnSpecifyFileWithSettings()
-{
-    serialConfigs->SetConfigsFileName(QFileDialog::getOpenFileName(this, tr("Open configurations file"), "", tr("*.json")));
-
-    // TEST
 }
 
 void

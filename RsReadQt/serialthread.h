@@ -69,52 +69,24 @@ class ArincLabel : protected std::pair<int, QString> {
     static QString ConvertCodeToName(int code) { return QString{}; }   // TODO: implement
 };
 
-class ArincMessage {
+class ArincMsg {
   public:
-    QTime timeArrivalPC;
-    QTime timeArrivalDT;
-    int   channel;
+    QDateTime timeArrivalPC;
+    int       channel;
     // ArincLabel labelRaw;
     uint8_t  labelRaw;
     uint64_t valueRaw;
+    double   value;
     uint8_t  SSM;
     uint8_t  parity;
-    uint64_t timeRaw;
+    uint64_t DTtimeRaw;
+    QTime    DTtime;
     uint8_t  SDI;
+
+    bool msgIsHealthy = false;
 };
 
-class DTMsgElement {
-  public:
-    enum class BitOrder {
-        MSB = 0,
-        LSB = 1
-    };
-
-    enum class ByteOrder {
-        MSB = 0,
-        LSB = 1
-    };
-
-    enum class DataFormat {
-        BIN = 0,
-        DEC,
-        OCT,
-        HEX,
-        BCD
-    };
-
-    int                 length     = 0;
-    BitOrder            bitOrder   = BitOrder::MSB;
-    ByteOrder           byteOrder  = ByteOrder::MSB;
-    std::pair<int, int> activeBits = std::pair<int, int>{ 0, 0 };
-    int                 startbyte  = -1;
-    DataFormat          dataFormat = DataFormat::BIN;
-
-    static uint8_t reverseBits(uint8_t data);
-};
-
-class DTMsgElement2 {
-  public:
+struct DTWordField {
     enum {
         UNDEFINED = -1
     };
@@ -123,6 +95,12 @@ class DTMsgElement2 {
         UNDEFINED = -1,
         NORMAL    = 0,
         REVERSE   = 1
+    };
+
+    enum class ByteOrder {
+        UNDEFINED = -1,
+        NORMAL,
+        REVERSE
     };
 
     enum class DataFormat {
@@ -135,11 +113,12 @@ class DTMsgElement2 {
     };
 
     int                 length     = UNDEFINED;
-    BitOrder            bitOrder   = BitOrder::UNDEFINED;
+    BitOrder            bitOrder   = BitOrder ::UNDEFINED;
+    ByteOrder           byteOrder  = ByteOrder::UNDEFINED;
     std::pair<int, int> activeBits = std::pair<int, int>{ UNDEFINED, UNDEFINED };
     DataFormat          dataFormat = DataFormat::UNDEFINED;
 
-    static uint8_t convertToReverseBits(uint8_t data)
+    static uint8_t reverseBitsInByte(uint8_t data)
     {
         data = (data & 0xF0) >> 4 | (data & 0x0F) << 4;
         data = (data & 0xCC) >> 2 | (data & 0x33) << 2;
@@ -148,23 +127,19 @@ class DTMsgElement2 {
     }
 };
 
-class DecodedData {
+class Arinc {
   public:
     void GetDecodeConfigsFromFile();
-    void GetDecodeConfigsFromFile2();
     void NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
-    void NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTMsgElement &configs, auto &container);
-    void NormalizeAndStoreMsgItem2(std::shared_ptr<dataPacket> data, DTMsgElement2 &elemStructure, auto &container);
+    void NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTWordField &elemStructure, auto &container);
 
   protected:
-    std::deque<ArincMessage>                        messages;
-    std::map<ArincLabel, std::vector<ArincMessage>> labels;
+    std::deque<ArincMsg>                        messages;
+    std::map<ArincLabel, std::vector<ArincMsg>> labels;
 
-    std::map<QString, DTMsgElement>  DTMessageStructure;
-    std::map<QString, DTMsgElement2> DTMsgAnatomy;
+    std::map<QString, DTWordField> DTMsgAnatomy;
 
     QString decodeConfigsFile;
-    QString decodeConfigsFile2;
 
     bool newConfigsFile      = false;
     bool anatomyIsConfigured = false;
@@ -172,7 +147,7 @@ class DecodedData {
   private:
 };
 
-class DataChart {
+class ArincLabelsChart {
   public:
     QGraphicsScene            *scene  = nullptr;
     QGraphicsView             *view   = nullptr;
@@ -188,7 +163,7 @@ class DataChart {
 };
 
 class OutputThread : public QThread,
-                     protected DecodedData {
+                     protected Arinc {
     Q_OBJECT
 
   public:
@@ -198,7 +173,7 @@ class OutputThread : public QThread,
                  QPlainTextEdit                         *rhTxt,
                  QPlainTextEdit                         *decodedTxt,
                  std::shared_ptr<void>                   dataBridgeConfigs,
-                 DataChart                              *chart);
+                 ArincLabelsChart                              *chart);
 
     ~OutputThread();
 
@@ -217,5 +192,5 @@ class OutputThread : public QThread,
     QPlainTextEdit                         *asciiOutputTxt   = nullptr;
     QPlainTextEdit                         *decodedOutputTxt = nullptr;
     QGraphicsScene                         *graphics         = nullptr;
-    DataChart                              *diagram          = nullptr;
+    ArincLabelsChart                       *diagram          = nullptr;
 };
