@@ -53,7 +53,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='d2|x64'" Label="QtSettings">
     <QtInstall>6.3.1_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;widgets;charts</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">

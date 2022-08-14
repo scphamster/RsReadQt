@@ -1,13 +1,17 @@
 #include "serialthread.h"
 
+#include <algorithm>
+
+#include <QMainWindow>
+
+#include <QFile>
+#include <QFileDialog>
 #include <QTime>
-#include <QTextBlock>
 #include <qtextedit.h>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
 #include <qjsonarray.h>
-#include <QFile>
-#include <QFileDialog>
+#include <QTextBlock>
 #include <QMessageBox>
 
 #include <QGraphicsScene>
@@ -26,7 +30,7 @@
 #include <QScatterSeries>
 #include <QSplineSeries>
 
-#include <windows.h>
+//#include <windows.h>
 
 ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
                              deque_s<std::shared_ptr<::dataPacket>> &data,
@@ -43,11 +47,24 @@ ReadingThread::quit()
 }
 
 void
+ReadingThread::Pause(bool makePause)
+{
+    isPaused = makePause;
+
+    if (!makePause)
+        serDevice.Flush();
+}
+
+void
 ReadingThread::run()
 {
-    assert(serDevice.Open() == 1);
+    // TODO: add error checking to serial
+    serDevice.Open();
 
     while (serDevice.IsOpen()) {
+        if (isPaused)
+            continue;
+
         if (serDevice.Read()) {
             emit notificationDataArrived();
         }
@@ -55,55 +72,63 @@ ReadingThread::run()
 }
 
 OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
-                           QPlainTextEdit                         *lhTxt,
-                           QPlainTextEdit                         *rhTxt,
-                           QPlainTextEdit                         *decodedTxt,
                            std::shared_ptr<void>                   dataBridgeConfigs,
-                           ArincLabelsChart                       *chart)
+                           QTabWidget                             *tabs,
+                           QChart                                 *ch,
+                           QChartView                             *chvw,
+                           QMainWindow                            *parent)
   : dataToOutput{ data }
-  , rawOutputTxt{ lhTxt }
-  , asciiOutputTxt{ rhTxt }
-  , decodedOutputTxt(decodedTxt)
-  , diagram(chart)
+  , tabWgt{ tabs }
+  , myParent(parent)
 {
+    diagram.chart     = ch;
+    diagram.chview    = chvw;
     decodeConfigsFile = std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName();
 
     assert(decodeConfigsFile != QString{});
 
     GetDecodeConfigsFromFile();
 
-    if (diagram->isInitialized)
-        return;
+    diagram.startOfOperation = QDateTime::currentDateTime();
 
-    diagram->chart->setTitle("Labels");
+    // textOutput = new QPlainTextEdit{ tabWgt };
+    // tabWgt->addTab(textOutput, "Raw");
 
-    diagram->yaxis = new QValueAxis;
-    diagram->xaxis = new QValueAxis;
+    outputList = new QListWidget{ tabWgt };
+    outputList->setUniformItemSizes(true);
+    tabWgt->addTab(outputList, "raw");
 
-    diagram->chart->addAxis(diagram->yaxis, Qt::AlignLeft);
-    diagram->chart->addAxis(diagram->xaxis, Qt::AlignBottom);
+    diagram.yaxis = new QValueAxis{ diagram.chart };
+    diagram.xaxis = new QValueAxis{ diagram.chart };
+
+    diagram.chart->addAxis(diagram.yaxis, Qt::AlignLeft);
+    diagram.chart->addAxis(diagram.xaxis, Qt::AlignBottom);
 
     auto valuesRange = 400;
 
-    diagram->yaxis->setRange(0, valuesRange);
-    diagram->xaxis->setRange(0, 10);
+    diagram.xaxis->setRange(0, 10);
+    diagram.yaxis->setRange(0, valuesRange);
+    diagram.yaxis->setTickInterval(10);
 
-    diagram->yaxis->setTickInterval(10);
-    diagram->isInitialized = true;
-
-    diagram->startOfOperation = QDateTime::currentDateTime();
+    connect(&diagram, &ArincLabelsChart::MsgOnChartBeenSelected, this, &OutputThread::ScrollAndSelectMsg);
 }
 
-OutputThread::~OutputThread() { }
+OutputThread::~OutputThread()
+{
+    diagram.labelsSeries.clear();
+}
 
 void
 OutputThread::AddLabelToDiagram(int labelIdx)
 {
-    if (diagram->labelsSeries.contains(labelIdx))
+    if (diagram.labelsSeries.contains(labelIdx))
         return;
 
-    auto &series      = diagram->labelsSeries[labelIdx];
-    auto  labelMarker = new QImage(80, 80, QImage::Format::Format_ARGB32);
+    diagram.labelsSeries[labelIdx].first = new QLineSeries{ diagram.chart };
+
+    auto &series = *diagram.labelsSeries[labelIdx].first;
+    series.setParent(this);
+    auto labelMarker = new QImage(80, 80, QImage::Format::Format_ARGB32);
     labelMarker->fill(QColor(0, 0, 0, 0));
 
     QPainter painter(labelMarker);
@@ -122,66 +147,55 @@ OutputThread::AddLabelToDiagram(int labelIdx)
 
     series.setPen(QPen(QColor(0, 0, 0, 0)));
 
-    // series->setBrush(QBrush(*labelMarker));
+    diagram.chart->addSeries(diagram.labelsSeries[labelIdx].first);
 
-    diagram->chart->addSeries(&diagram->labelsSeries[labelIdx]);
+    series.attachAxis(diagram.yaxis);
+    series.attachAxis(diagram.xaxis);
 
-    series.attachAxis(diagram->yaxis);
-    series.attachAxis(diagram->xaxis);
+    QObject::connect(&series, &QXYSeries::released, &diagram, &ArincLabelsChart::OnLabelOnChartSelected);
 }
 
 void
 OutputThread::ShowDiagram()
 {
-    auto  data             = messages.back();
-    qreal secondsFromStart = (-1) * static_cast<qreal>(data.timeArrivalPC.msecsTo(diagram->startOfOperation)) / 1000;
+    const auto &data             = messages.back();
+    qreal       secondsFromStart = (-1) * static_cast<qreal>(data.timeArrivalPC.msecsTo(diagram.startOfOperation)) / 1000;
 
-    if (!diagram->labelsSeries.contains(data.labelRaw))
+    if (!diagram.labelsSeries.contains(data.labelRaw))
         AddLabelToDiagram(data.labelRaw);
 
-    diagram->labelsSeries[data.labelRaw].append(QPointF(secondsFromStart, data.labelRaw));
+    diagram.labelsSeries[data.labelRaw].first->append(QPointF(secondsFromStart, data.labelRaw));
+    diagram.labelsSeries[data.labelRaw].second.push_back(std::pair<qreal, const ArincMsg &>(secondsFromStart, data));
 
-    if (diagram->yaxis->max() < data.labelRaw) {
-        diagram->yaxis->setMax(data.labelRaw + 50);
+    if (diagram.yaxis->max() < data.labelRaw) {
+        diagram.yaxis->setMax(data.labelRaw + 50);
     }
 
-    if (diagram->xaxis->max() < secondsFromStart) {
-        diagram->xaxis->setMax(secondsFromStart + 5);
-        diagram->xaxis->setMin(secondsFromStart - 10);
+    if (diagram.xaxis->max() < secondsFromStart) {
+        diagram.xaxis->setMax(secondsFromStart + 5);
+        diagram.xaxis->setMin(secondsFromStart - 10);
     }
 
     // Beep(data.labelRaw * 4, 50);
 }
 
 void
-OutputThread::ShowNormalizedRawData(auto data)
+OutputThread::NormalizeRawData(const auto &data, QString &appendHere)
 {
     NormalizeAndStoreMsg(data);
-    QString decodedOut;
-    auto    decoded = messages.back();
 
-    decodedOut.append("Channel ");
-    decodedOut.append(QString::number(decoded.channel));
+    const auto &decoded = messages.back();
 
-    decodedOut.append(" Label ");
-    decodedOut.append(QString::number(decoded.labelRaw));
+    appendHere.append(QString{ "Channel %1, Label %2, SDI %3, Data %4, SSM %5, Parity %6, Time %7" }
+                        .arg(decoded.channel)
+                        .arg(decoded.labelRaw)
+                        .arg(decoded.SDI)
+                        .arg(decoded.valueRaw)
+                        .arg(decoded.SSM)
+                        .arg(decoded.parity)
+                        .arg(decoded.DTtimeRaw));
 
-    decodedOut.append(" SDI: ");
-    decodedOut.append(QString::number(decoded.SDI));
-
-    decodedOut.append(" Data ");
-    decodedOut.append(QString::number(decoded.valueRaw));
-
-    decodedOut.append(" SSM: ");
-    decodedOut.append(QString::number(decoded.SSM));
-
-    decodedOut.append(" Parity: ");
-    decodedOut.append(QString::number(decoded.parity));
-
-    decodedOut.append(" Time ");
-    decodedOut.append(QString::number(decoded.DTtimeRaw));
-
-    decodedOutputTxt->appendPlainText(decodedOut);
+    lastMsgReadedNum = decoded.msgNumber;
 }
 
 void
@@ -194,44 +208,35 @@ OutputThread::ShowNewData(void)
     auto data = std::make_shared<dataPacket>();
     dataToOutput.pop_front_wait(data);
 
-    ShowNormalizedRawData(data);
-    ShowDiagram();
-
     QString rawOutput;
-    QString asciiOutput;
 
-    rawOutput.append("\n");
-    rawOutput.append(" #");
-    rawOutput.append(QString::number(data->msg_counter));
-    rawOutput.append(QTime::currentTime().toString("  hh:mm:ss:zzz "));
+    rawOutput.append(QString{ "#%1  " }.arg(data->msg_counter));
+    rawOutput.append(data->msg_arrival_time.toString("  hh:mm:ss:zzz "));
     rawOutput.append("RawData: ");
     // TODO: use vector range for loop
-    for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
-        rawOutput.append(QString::number(static_cast<uchar>(data->data[i])));
+    for (const auto &data : data->data) {
+        rawOutput.append(QString::number(static_cast<uchar>(data)));
         rawOutput.append(" ");
     }
 
-    asciiOutput.append(QString("\nMsg number: "));
-    asciiOutput.append(QString::number(data->msg_counter));
-    asciiOutput.append(QString(":\n"));
-    asciiOutput.append(QByteArray(data->data._Unchecked_begin(), data->bytes_in_buffer));
+    NormalizeRawData(data, rawOutput);
+    outputList->addItem(rawOutput);
 
-    rawOutputTxt->appendPlainText(rawOutput);
-    asciiOutputTxt->appendPlainText(asciiOutput);
-
-    auto asciiLineCount = asciiOutputTxt->document()->lineCount();
-    auto rawLineCount   = rawOutputTxt->document()->lineCount();
-    auto lineDiff       = asciiLineCount - rawLineCount;
-    if (lineDiff != 0) {
-        auto equalizer = QString("");
-
-        if (lineDiff > 1) {
-            lineDiff--;   // insertion to TextEdit makes newline itself
-            equalizer.append(QString(qAbs(lineDiff), '\n'));
-        }
-
-        lineDiff > 0 ? rawOutputTxt->appendPlainText(equalizer) : asciiOutputTxt->appendPlainText(equalizer);
+    if (diagram.selectedItem == ArincLabelsChart::ItemSelection::NOTSELECTED) {
+        outputList->scrollToBottom();
     }
+    else {
+        
+    }
+
+    ShowDiagram();
+}
+
+void
+OutputThread::ScrollAndSelectMsg(uint64_t item)
+{
+    outputList->scrollToItem(outputList->item(diagram.selectedItem));
+    outputList->setCurrentRow((diagram.selectedItem));
 }
 
 bool
@@ -241,7 +246,8 @@ OutputThread::SaveSession()
 
     QString messagesText;
 
-    messagesText.append(decodedOutputTxt->toPlainText());
+    // test
+    // messagesText.append(textOutput->toPlainText());
     QFile lastSessionFile(saveto_fileAddress);
 
     lastSessionFile.open(QIODeviceBase::OpenModeFlag::Append);
@@ -349,50 +355,6 @@ Arinc::GetDecodeConfigsFromFile()
     anatomyIsConfigured = true;
 }
 
-// void
-// Arinc::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
-//{
-//     auto firstByteNum = configs.activeBits.first / 8;
-//     auto lastByteNum  = configs.activeBits.second / 8;
-//
-//     auto byteCounter     = (firstByteNum <= lastByteNum) ? 0 : lastByteNum;
-//     auto byteCounterIncr = (firstByteNum <= lastByteNum) ? 1 : lastByteNum;
-//
-//     auto firstByteFirstBitNum =
-//       (firstByteNum <= lastByteNum) ? configs.activeBits.first % 8 : configs.activeBits.second % 8;
-//     auto firstByteActiveBitsNum = 8 - firstByteFirstBitNum;
-//     auto lastByteLastBitNum     = configs.activeBits.second % 8;
-//
-//     auto     bitsNumber  = configs.activeBits.second - configs.activeBits.first + 1;
-//     auto     firstBitNum = (firstByteNum <= lastByteNum) ? configs.activeBits.first % 8 : configs.activeBits.second % 8;
-//     uint64_t globalMask  = ((1 << bitsNumber) - 1) << firstBitNum;
-//
-//     container = 0;
-//     for (int i = firstByteNum; true; i++) {
-//         auto byte    = static_cast<uint8_t>(data->data.at(i));
-//         auto byteNum = i - firstByteNum;
-//
-//         if (configs.bitOrder == DTWordField::BitOrder::REVERSE) {
-//             byte = DTWordField::reverseBitsInByte(byte);
-//         }
-//
-//         uint8_t maskForThisByte = globalMask >> (byteNum * 8);
-//         byte &= maskForThisByte;
-//
-//         auto leftShiftBitsNum = byteNum * 8 - firstByteFirstBitNum;
-//
-//         if (i == firstByteNum) {
-//             container |= byte >> firstByteFirstBitNum & 0xff;
-//         }
-//         else {
-//             container |= (byte & 0xff) << leftShiftBitsNum;
-//         }
-//
-//         if (i == lastByteNum)
-//             break;
-//     }
-// }
-
 void
 Arinc::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
 {
@@ -421,16 +383,19 @@ Arinc::NormalizeAndStoreMsgItem(std::shared_ptr<dataPacket> data, DTWordField &c
             byte = DTWordField::reverseBitsInByte(byte);
         }
 
+        if (byteNumber > 7)
+            while (1) { }
+
         container |= byte << (byteNumber * 8);
 
-        byteNumber ++;
+        byteNumber++;
 
         if (i == lastByteNum)
             break;
     }
 
     auto     activeBitsNum = configs.activeBits.second - configs.activeBits.first + 1;
-    uint64_t mask          = (1 << activeBitsNum) - 1;
+    uint64_t mask          = (static_cast<uint64_t>(1 << activeBitsNum)) - 1;
 
     if (configs.byteOrder == DTWordField::ByteOrder::NORMAL) {
         auto firstByteFirstBitNum = configs.activeBits.first % 8;
@@ -463,6 +428,7 @@ Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
     ArincMsg msg;
     if (decodeConfigsFile != QString{}) {
         msg.timeArrivalPC = rawData->msg_arrival_time;
+        msg.msgNumber     = rawData->msg_counter;
 
         for (auto &msgChunk : DTMsgAnatomy) {
             if (msgChunk.second.activeBits.first / 8 >= rawData->bytes_in_buffer ||
@@ -481,4 +447,38 @@ Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
     }
 
     messages.push_back(msg);
+}
+
+void
+ArincLabelsChart::OnLabelOnChartSelected(const QPointF &point)
+{
+    GetDataFromLabelOnChart(point);
+}
+
+bool
+ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
+{
+    int label = static_cast<int>(atPoint.y());
+
+    const auto &dataVector = labelsSeries.at(label).second;
+
+    auto finder = [&atPoint](const auto &pointAndData) {
+        if (pointAndData.first == atPoint.x()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    };
+
+    auto finding = std::find_if(dataVector.rbegin(), dataVector.rend(), finder);
+
+    if (finding != dataVector.rend()) {
+        selectedItem = (finding->second.msgNumber);
+        
+        emit MsgOnChartBeenSelected(selectedItem);
+
+        return true;
+    }
+    return false;
 }

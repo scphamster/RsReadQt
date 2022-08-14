@@ -27,13 +27,14 @@ bool
 Serial::Read()
 {
     auto newdata = std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(),
-                                                data_packet_counter++,
+                                                dataPacketN++,
                                                 QDateTime::currentDateTime());
 
     auto ans = readBytes(newdata->data._Unchecked_begin(), newdata->data.size(), 0);
 
     if (ans <= 0) {
         err = ans;
+        dataPacketN--;
         return false;
     }
 
