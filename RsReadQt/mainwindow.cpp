@@ -28,8 +28,9 @@ MainWindow::MainWindow(QWidget *parent)
     chview = new QChartView{ chart, this };
     chart->setParent(chview);
     chart->setTitle("Labels");
-
-    setCentralWidget(chview);
+    verticalLayout_2->insertWidget(0,chview);
+    //setCentralWidget(chview);
+    //gridLayout->addWidget(chview);
 
     resizeDocks({ OutputDocker }, { static_cast<int>(BOTdOCKdEFhEIGHT * size().height()) }, Qt::Orientation::Vertical);
 

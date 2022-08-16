@@ -115,30 +115,7 @@ OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
     diagram.chart->setTheme(QChart::ChartTheme::ChartThemeDark);
     diagram.chview->setRenderHint(QPainter::RenderHint::Antialiasing, true);
 
-    // experimental
-    //auto hscroll = new QScrollBar{ Qt::Orientation::Horizontal, diagram.chview };
-    //auto vscroll = new QScrollBar{ Qt::Orientation::Vertical, diagram.chview };
-    
-    auto hscroll = new QScrollBar{ Qt::Orientation::Horizontal, diagram.chview };
-    auto vscroll = new QScrollBar{ Qt::Orientation::Vertical, diagram.chview };
-    
-    hscroll->setRange(diagram.xaxis->min(), diagram.xaxis->max());
-    vscroll->setRange(diagram.yaxis->min(), diagram.yaxis->max());
-    hscroll->setVisible(true);
-    hscroll->setGeometry(QRect(200, 200, 400, 220));
-
-
-
-    //diagram.chview->setHorizontalScrollBar(hscroll);
-    //diagram.chview->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    //diagram.chview->setVerticalScrollBar(vscroll);
-    //diagram.chview->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    //diagram.chview->setDragMode(QGraphicsView::DragMode::ScrollHandDrag);
-    //~experimental
-
     connect(&diagram, &ArincLabelsChart::MsgOnChartBeenSelected, this, &OutputThread::ScrollAndSelectMsg);
-    connect(vscroll, &QScrollBar::valueChanged, this, &OutputThread::testSlot);
-    
     diagram.chview->installEventFilter(this);
 }
 
