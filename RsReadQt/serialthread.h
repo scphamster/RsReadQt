@@ -136,6 +136,7 @@ struct DTWordField {
     }
 };
 
+
 class ArincLabelsChart : public QObject {
     Q_OBJECT
   public:
@@ -156,7 +157,8 @@ class ArincLabelsChart : public QObject {
     bool      isInitialized = false;
     QDateTime startOfOperation;
 
-    uint64_t selectedItem = NOTSELECTED;
+    uint64_t idxOfSelectedMsg = NOTSELECTED;
+    QLineSeries *selectedMsgSeriesAffinity = nullptr;
 
   signals:
     void MsgOnChartBeenSelected(uint64_t msgN);
@@ -203,13 +205,13 @@ class OutputThread : public QThread,
 
     void NormalizeRawData(const auto &data, QString &);
     void ShowDiagram();
-    void AddLabelToDiagram(int labelIdx);
+    void AddLabelToDiagram(int msgNo, int channel, int labelIdx);
 
   public slots:
     void ShowNewData();
     bool SaveSession();
     void ScrollAndSelectMsg(uint64_t msgN);
-    // void quit();
+    void testSlot(int);
 
   private:
     QMainWindow *myParent = nullptr;
@@ -217,5 +219,7 @@ class OutputThread : public QThread,
 
     deque_s<std::shared_ptr<::dataPacket>> &dataToOutput;
 
-    QListWidget *outputList = nullptr;
+    QListWidget *listOfMessages = nullptr;
+
+    bool eventFilter(QObject *obj, QEvent *evt) override;
 };
