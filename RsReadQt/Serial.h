@@ -419,6 +419,7 @@ class Serial : private dataPacket,
     char Open();
     bool IsOpen() { return serialib::isDeviceOpen(); }
     bool Read();
+    void Flush() { flushReceiver(); }
     bool Stop();
 
     QString                             ConvRawToString(std::shared_ptr<Serial::dataPacket> data_item);
@@ -428,6 +429,6 @@ class Serial : private dataPacket,
   private:
     std::shared_ptr<_SerialConfigs<int, QString>> serialConfigs;
     deque_s<std::shared_ptr<dataPacket>>         &databidgeData;
-    uint64_t                                      data_packet_counter = 0;
+    uint64_t                                      dataPacketN = 0;
     int                                           err                 = 0;
 };

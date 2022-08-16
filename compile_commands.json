@@ -1,0 +1,43 @@
+﻿[
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Projects/VS/RSReadQT/RsReadQt/main.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Projects/VS/RSReadQT/RsReadQt/main.cpp"
+  }
+  ,
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Projects/VS/RSReadQT/RsReadQt/mainwindow.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Projects/VS/RSReadQT/RsReadQt/mainwindow.cpp"
+  }
+  ,
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Projects/VS/RSReadQT/RsReadQt/serialthread.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Projects/VS/RSReadQT/RsReadQt/serialthread.cpp"
+  }
+  ,
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Libraries/serialib-master/serialib-master/lib/serialib.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Libraries/serialib-master/serialib-master/lib/serialib.cpp"
+  }
+  ,
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Projects/VS/RSReadQT/RsReadQt/TextEdit.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Projects/VS/RSReadQT/RsReadQt/TextEdit.cpp"
+  }
+  ,
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Projects/VS/RSReadQT/RsReadQt/serialconfig.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Projects/VS/RSReadQT/RsReadQt/serialconfig.cpp"
+  }
+  ,
+  {
+    "directory": "C:/dev/Projects/VS/RSReadQT/",
+    "command": "\"C:/Program Files/LLVM/bin/clang++.exe\" -x c++ \"C:/dev/Projects/VS/RSReadQT/RsReadQt/Serial.cpp\" -std=c++2b -Wall -fms-compatibility-version=19.10 -Wmicrosoft -Wno-invalid-token-paste -Wno-unknown-pragmas -Wno-unused-value -fsyntax-only \"-D_MT\" \"-D_DLL\" \"-DQT_QML_DEBUG\" \"-D_DEBUG_FUNCTIONAL_MACHINERY\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.32.31326/atlmfc/include\" -isystem\"C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS/include\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/winrt\" -isystem\"C:/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/cppwinrt\" -I\"C:/dev/Libraries/serialib-master/serialib-master/lib\"",
+    "file": "C:/dev/Projects/VS/RSReadQT/RsReadQt/Serial.cpp"
+  }
+]

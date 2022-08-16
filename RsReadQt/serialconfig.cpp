@@ -41,6 +41,7 @@ SerialConfig::SaveSettingsToSystem()
     settings.beginGroup("SerialConfigs");
     {
         settings.setValue("Port", localSelections["Port"].first);
+        settings.setValue("Baudrate", localSelections["Baudrate"].second);
         settings.setValue("ConfigsFile", serialConfigs->GetConfigsFileName());
     }
     settings.endGroup();
@@ -71,6 +72,11 @@ SerialConfig::RetreiveSettingsFromSystem()
         }
 
         localSelections["Port"] = serialConfigs->GetSelectedPort();
+    }
+    
+    if (settings.contains("Baudrate")) {
+        serialConfigs->SetBaudrateByValue(settings.value("Baudrate").toString());
+        localSelections["Baudrate"] = serialConfigs->GetSelectedBaudrate();
     }
 
     if (settings.contains("ConfigsFile")) {

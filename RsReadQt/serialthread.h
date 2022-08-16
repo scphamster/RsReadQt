@@ -1,23 +1,29 @@
 #pragma once
-#include <qthread.h>
-#include <qmutex.h>
-
-#include <QTime>
-#include <qplaintextedit.h>
-
-#include <QGraphicsScene>
-#include <QGraphicsView>
-#include <QtCharts/QChartView>
-#include <QtCharts/QChart>
-#include <qvalueaxis.h>
-#include <QScatterSeries>
-#include <QLineSeries>
-#include <QSplineSeries>
 
 #include <vector>
 #include <map>
 #include <memory>
 #include <deque>
+
+#include <QMainWindow>
+#include <QTabWidget>
+
+#include <QTime>
+#include <qthread.h>
+#include <qmutex.h>
+
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QtCharts/QChartView>
+#include <QtCharts/QChart>
+#include <QValueAxis>
+#include <QScatterSeries>
+#include <QLineSeries>
+#include <QSplineSeries>
+
+#include <QPlainTextEdit>
+#include <qlistview.h>
+#include <qlistwidget.h>
 
 #include "Serial.h"   //this header should be last
 // DT = DataTrack
@@ -35,7 +41,8 @@ class ReadingThread : public QThread {
   public:
     ReadingThread() = delete;
     ReadingThread(std::shared_ptr<void> databridgeConfig, deque_s<std::shared_ptr<::dataPacket>> &data, QObject *parent);
-    //~ReadingThread();
+
+    void Pause(bool makePuase = true);
     void run() override;
 
   public slots:
@@ -46,6 +53,7 @@ class ReadingThread : public QThread {
 
   private:
     Serial serDevice;
+    bool   isPaused = false;
 };
 
 class ArincLabel : protected std::pair<int, QString> {
@@ -82,6 +90,7 @@ class ArincMsg {
     uint64_t DTtimeRaw;
     QTime    DTtime;
     uint8_t  SDI;
+    uint64_t msgNumber = 0;
 
     bool msgIsHealthy = false;
 };
@@ -127,6 +136,36 @@ struct DTWordField {
     }
 };
 
+
+class ArincLabelsChart : public QObject {
+    Q_OBJECT
+  public:
+    void OnLabelOnChartSelected(const QPointF &);
+    bool GetDataFromLabelOnChart(const QPointF &);
+
+    QChart                                                                                  *chart  = nullptr;
+    QChartView                                                                              *chview = nullptr;
+    QValueAxis                                                                              *yaxis  = nullptr;
+    QValueAxis                                                                              *xaxis  = nullptr;
+    QLineSeries                                                                             *series = nullptr;
+    std::map<int, std::pair<QLineSeries *, std::vector<std::pair<qreal, const ArincMsg &>>>> labelsSeries;
+
+    enum ItemSelection {
+        NOTSELECTED = UINT64_MAX
+    };
+
+    bool      isInitialized = false;
+    QDateTime startOfOperation;
+
+    uint64_t idxOfSelectedMsg = NOTSELECTED;
+    QLineSeries *selectedMsgSeriesAffinity = nullptr;
+
+  signals:
+    void MsgOnChartBeenSelected(uint64_t msgN);
+
+  private:
+};
+
 class Arinc {
   public:
     void GetDecodeConfigsFromFile();
@@ -141,25 +180,12 @@ class Arinc {
 
     QString decodeConfigsFile;
 
-    bool newConfigsFile      = false;
-    bool anatomyIsConfigured = false;
+    bool             newConfigsFile      = false;
+    bool             anatomyIsConfigured = false;
+    uint64_t         lastMsgReadedNum    = 0;
+    ArincLabelsChart diagram;
 
   private:
-};
-
-class ArincLabelsChart {
-  public:
-    QGraphicsScene            *scene  = nullptr;
-    QGraphicsView             *view   = nullptr;
-    QChartView                *chview = nullptr;
-    QChart                    *chart  = nullptr;
-    QValueAxis                *yaxis  = nullptr;
-    QValueAxis                *xaxis  = nullptr;
-    QLineSeries               *series = nullptr;
-    std::map<int, QLineSeries> labelsSeries;
-
-    bool      isInitialized = false;
-    QDateTime startOfOperation;
 };
 
 class OutputThread : public QThread,
@@ -169,28 +195,31 @@ class OutputThread : public QThread,
   public:
     OutputThread() = delete;
     OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
-                 QPlainTextEdit                         *lhTxt,
-                 QPlainTextEdit                         *rhTxt,
-                 QPlainTextEdit                         *decodedTxt,
                  std::shared_ptr<void>                   dataBridgeConfigs,
-                 ArincLabelsChart                              *chart);
-
+                 QTabWidget                             *tabs,
+                 // std::shared_ptr<QChart>                 ch,
+                 QChart      *ch,
+                 QChartView  *chvw,
+                 QMainWindow *parent = nullptr);
     ~OutputThread();
 
-    void ShowNormalizedRawData(auto data);
+    void NormalizeRawData(const auto &data, QString &);
     void ShowDiagram();
-    void AddLabelToDiagram(int labelIdx);
+    void AddLabelToDiagram(int msgNo, int channel, int labelIdx);
 
   public slots:
     void ShowNewData();
     bool SaveSession();
-    // void quit();
+    void ScrollAndSelectMsg(uint64_t msgN);
+    void testSlot(int);
 
   private:
+    QMainWindow *myParent = nullptr;
+    QTabWidget  *tabWgt;
+
     deque_s<std::shared_ptr<::dataPacket>> &dataToOutput;
-    QPlainTextEdit                         *rawOutputTxt     = nullptr;
-    QPlainTextEdit                         *asciiOutputTxt   = nullptr;
-    QPlainTextEdit                         *decodedOutputTxt = nullptr;
-    QGraphicsScene                         *graphics         = nullptr;
-    ArincLabelsChart                       *diagram          = nullptr;
+
+    QListWidget *listOfMessages = nullptr;
+
+    bool eventFilter(QObject *obj, QEvent *evt) override;
 };
