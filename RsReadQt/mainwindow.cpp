@@ -24,14 +24,6 @@ MainWindow::MainWindow(QWidget *parent)
     outputTabs = new QTabWidget{ OutputDocker };
     OutputDocker->setWidget(outputTabs);
 
-    chart  = new QChart{};
-    chview = new QChartView{ chart, this };
-    chart->setParent(chview);
-    chart->setTitle("Labels");
-    verticalLayout_2->insertWidget(0,chview);
-    //setCentralWidget(chview);
-    //gridLayout->addWidget(chview);
-
     resizeDocks({ OutputDocker }, { static_cast<int>(BOTdOCKdEFhEIGHT * size().height()) }, Qt::Orientation::Vertical);
 
     connect(actionConfigure_serial, &QAction::triggered, this, &MainWindow::OnSerialConfigureClicked);
@@ -95,7 +87,7 @@ MainWindow::OnStartSerialClicked()
         }
     }
 
-    writerThr = new OutputThread(databridgeData, databridgeConfig, outputTabs, chart, chview, this);
+    writerThr = new OutputThread(databridgeData, databridgeConfig, outputTabs, this);
     connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater, Qt::DirectConnection);
 
     readerThr = new ReadingThread(databridgeConfig, databridgeData, this);
