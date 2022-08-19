@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QWidget>
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QScrollBar>
 #include <QString>
 #include <QDateTime>
@@ -20,24 +21,6 @@
 #include "datatrack.hpp"
 #include "Serial.h"
 
-class ArincMsg {
-  public:
-    QDateTime timeArrivalPC;
-    int       channel;
-    // ArincLabel labelRaw;
-    uint8_t  labelRaw;
-    uint64_t valueRaw;
-    double   value;
-    uint8_t  SSM;
-    uint8_t  parity;
-    uint64_t DTtimeRaw;
-    QTime    DTtime;
-    uint8_t  SDI;
-    uint64_t msgNumber = 0;
-
-    bool msgIsHealthy = false;
-};
-
 class ArincLabel : protected std::pair<int, QString> {
   public:
     using pair = std::pair<int, QString>;
@@ -47,16 +30,43 @@ class ArincLabel : protected std::pair<int, QString> {
     };
 
     ArincLabel()
-      : pair(UNDEFINED, "")
+      : pair(UNDEFINED, QString{})
     { }
 
-    ArincLabel(int code)
+    explicit ArincLabel(int code)
       : pair(code, ConvertCodeToName(code))
     { }
 
-    auto           Code() { return first; }
-    auto           Name() { return second; }
-    static QString ConvertCodeToName(int code) { return QString{}; }   // TODO: implement
+    bool operator<(const ArincLabel &_Rhs) const noexcept { return (_Rhs.first > this->first); }
+
+    auto GetCode() { return first; }
+    auto GetName() { return second; }
+
+    void InitByCode(int raw)
+    {
+        first  = raw;
+        second = QString::number(raw, 8);
+    }
+
+    static QString ConvertCodeToName(int code) { return QString::number(code, 8); };
+};
+
+class ArincMsg {
+  public:
+    QDateTime  timeArrivalPC;
+    int        channel;
+    ArincLabel label;
+    uint8_t    labelRaw;
+    uint64_t   valueRaw;
+    double     value;
+    uint8_t    SSM;
+    uint8_t    parity;
+    uint64_t   DTtimeRaw;
+    QTime      DTtime;
+    uint8_t    SDI;
+    uint64_t   msgNumber = 0;
+
+    bool msgIsHealthy = false;
 };
 
 class ScrollBar : public QScrollBar {
@@ -64,7 +74,7 @@ class ScrollBar : public QScrollBar {
 
   public:
     template<typename... Args>
-    ScrollBar(Args... args)
+     ScrollBar(Args... args)
       : QScrollBar(std::forward<decltype(args)>(args)...)
     { }
 
@@ -76,6 +86,24 @@ class ScrollBar : public QScrollBar {
   private:
     bool skipValueAdjustment = false;
     bool skipValueChangedEvt = false;
+};
+
+class LineSeries : public QLineSeries {
+    Q_OBJECT
+
+  public:
+    template<typename... Args>
+    LineSeries(Args... args)
+      : QLineSeries(std::forward<Args>(args)...)
+    { }
+
+    void SetMarkerVisibility(bool visible);
+    bool MarkerIsVisible() { return isVisible; }
+
+  private:
+    QImage _lightMarker;
+    QImage _selectedLightMarker;
+    bool   isVisible = true;
 };
 
 // TODO: make QWidget protected
@@ -91,7 +119,6 @@ class ArincLabelsChart : public QWidget {
 
     bool IsSomeLabelSelected() const noexcept { return idxOfSelectedMsg != ItemSelection::NOTSELECTED; }
     void AddLabel(int channel, int labelIdx);
-    void AppendLabelSeries(uint8_t label_num, qreal msg_time);
     void Append(const ArincMsg &msg);
 
     enum ItemSelection {
@@ -107,39 +134,31 @@ class ArincLabelsChart : public QWidget {
   signals:
     void MsgOnChartBeenSelected(uint64_t msgN);
 
-  private slots:
-    void AdjustVScroll(qreal min, qreal max);
-    void AdjustHScroll(qreal min, qreal max);
-    void OnVScrollValueChanged(int value);
-    void OnHScrollValueChanged(int value);
+  public slots:
+    void SetLabelVisibility(int label, Qt::CheckState checkstate);
 
   private:
     bool eventFilter(QObject *obj, QEvent *evt) override;
 
-    bool      isInitialized = false;
-    QDateTime startOfOperation;
+    QDateTime   startOfOperation;
+    uint64_t    idxOfSelectedMsg          = NOTSELECTED;
+    LineSeries *selectedMsgSeriesAffinity = nullptr;
 
-    uint64_t     idxOfSelectedMsg          = NOTSELECTED;
-    QLineSeries *selectedMsgSeriesAffinity = nullptr;
+    QCheckBox  *autoRangeChBox = nullptr;
+    ScrollBar  *hscroll        = nullptr;
+    ScrollBar  *vscroll        = nullptr;
+    QChart     *chart          = nullptr;
+    QChartView *chview         = nullptr;
+    QValueAxis *vaxis          = nullptr;
+    QValueAxis *haxis          = nullptr;
 
-    ScrollBar   *hscroll         = nullptr;
-    ScrollBar   *vscroll         = nullptr;
-    QVBoxLayout *sizer           = nullptr;
-    bool         manualAxisRange = false;
-    qreal        haxisZoom       = 1.0;
-    qreal        vaxisZoom       = 1.0;
-    qreal        hmax = 0, hmin = 0;
-    qreal        vmax = 0, vmin = 0;
-    qreal        hAxisVisibleLen = -1;
-    qreal        vAxisVisibleLen = -1;
+    std::map<int, std::pair<LineSeries *, std::vector<std::pair<qreal, const ArincMsg &>>>> labelsSeries;
 
-    QChart      *chart  = nullptr;
-    QChartView  *chview = nullptr;
-    QValueAxis  *yaxis  = nullptr;
-    QValueAxis  *xaxis  = nullptr;
-    QLineSeries *series = nullptr;
-
-    std::map<int, std::pair<QLineSeries *, std::vector<std::pair<qreal, const ArincMsg &>>>> labelsSeries;
+    bool  manualAxisRange = false;
+    qreal haxisZoom       = 1.0;
+    qreal vaxisZoom       = 1.0;
+    qreal hmax = 0, hmin = 0;
+    qreal vmax = 0, vmin = 0;
 
     // mutexes for elimination of self event generation
     bool skipHScrollValueAdjustment = false;
@@ -153,11 +172,12 @@ class Arinc {
     Arinc() = default;
     Arinc(QString decodingFile);
 
-    void GetDecodeConfigsFromFile();
-    void NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
-    void NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &elemStructure, auto &container);
-    void MsgPushBack(ArincMsg &msg) { messages.push_back(msg); }
-    auto MsgPopFront() { return messages.front(); }
+    void           GetDecodeConfigsFromFile();
+    void           NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
+    void           NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &elemStructure, auto &container);
+    void           MsgPushBack(ArincMsg &msg) { messages.push_back(msg); }
+    decltype(auto) FirstMsg() { return messages.front(); }
+    decltype(auto) LastMsg() { return messages.back(); }
 
     // TODO: make setters getters
     std::deque<ArincMsg>                        messages;

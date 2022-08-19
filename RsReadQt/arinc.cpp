@@ -8,6 +8,29 @@
 
 #include "arinc.hpp"
 
+void
+LineSeries::SetMarkerVisibility(bool make_visible)
+{
+    if (make_visible == isVisible)
+        return;
+
+    if (make_visible == false) {
+        _lightMarker = lightMarker();
+        _selectedLightMarker = selectedLightMarker();
+
+        setLightMarker(QImage{});
+        setSelectedLightMarker(QImage{});
+
+        isVisible = make_visible;
+    }
+    else {
+        setLightMarker(_lightMarker);
+        setSelectedLightMarker(_selectedLightMarker);
+        isVisible = make_visible;
+    }
+
+}
+
 ArincLabelsChart::ArincLabelsChart(QWidget *mainWindow)
   : QWidget(mainWindow)
 {
@@ -18,43 +41,49 @@ ArincLabelsChart::ArincLabelsChart(QWidget *mainWindow)
     chart  = new QChart{};
     chview = new QChartView{ chart, this };
     chart->setParent(chview);
-    chart->setTitle("Labels");
+    // chart->setTitle("Labels");
+    chart->legend()->setVisible(false);
+
+    chart->setTheme(QChart::ChartTheme::ChartThemeBrownSand);
     chview->setParent(this);
+    chview->setRenderHint(QPainter::RenderHint::Antialiasing, true);
 
     hscroll = new ScrollBar{ Qt::Orientation::Horizontal, this };
     vscroll = new ScrollBar{ Qt::Orientation::Vertical, this };
 
     dynamic_cast<QMainWindow *>(mainWindow)->centralWidget()->layout()->addWidget(this);
 
-    yaxis = new QValueAxis{ chart };
-    yaxis->setTickCount(10);
-    xaxis = new QValueAxis{ chart };
-    chart->addAxis(yaxis, Qt::AlignLeft);
-    chart->addAxis(xaxis, Qt::AlignBottom);
-    chart->setAnimationDuration(100);
-
-    auto valuesRange = 150;
-    xaxis->setRange(0, 10);
-    xaxis->setTickCount(10);
-    hAxisVisibleLen = 10;
-
-    yaxis->setRange(0, valuesRange);
-    vAxisVisibleLen = 150;
-
-    chart->setTheme(QChart::ChartTheme::ChartThemeDark);
-    chview->setRenderHint(QPainter::RenderHint::Antialiasing, true);
-
+    vaxis = new QValueAxis{ chart };
+    haxis = new QValueAxis{ chart };
+    vaxis->setTickCount(10);
+    haxis->setTickCount(10);
     hscroll->setMinimum(0);
     vscroll->setMinimum(0);
+    chart->addAxis(vaxis, Qt::AlignLeft);
+    chart->addAxis(haxis, Qt::AlignBottom);
 
-    // TODO: make palette
+    autoRangeChBox = new QCheckBox{ tr("Automatic diagram scroll"), this };
+    autoRangeChBox->setGeometry(QRect{ 20, 10, 200, 30 });
+    autoRangeChBox->setCheckState(Qt::CheckState::Checked);
+    // autoRangeChBox->setFont(QFont{})
 
     startOfOperation = QDateTime::currentDateTime();
+    // TODO: make palette
 
-    connect(yaxis, &QValueAxis::rangeChanged, this, &ArincLabelsChart::AdjustVScroll);
-    connect(xaxis, &QValueAxis::rangeChanged, this, &ArincLabelsChart::AdjustHScroll);
-    connect(vscroll, &ScrollBar::valueChanged, this, &ArincLabelsChart::OnVScrollValueChanged);
-    connect(hscroll, &ScrollBar::valueChanged, this, &ArincLabelsChart::OnHScrollValueChanged);
+    connect(vaxis, &QValueAxis::rangeChanged, this, [this](qreal min, qreal max) {
+        _AdjustScrollToAxis(vscroll, min, max);
+    });
+    connect(haxis, &QValueAxis::rangeChanged, this, [this](qreal min, qreal max) {
+        _AdjustScrollToAxis(hscroll, min, max);
+    });
+    connect(vscroll, &ScrollBar::valueChanged, this, [this](int value) { _AdjustAxisToScroll(vaxis, vscroll, value); });
+    connect(hscroll, &ScrollBar::valueChanged, this, [this](int value) { _AdjustAxisToScroll(haxis, hscroll, value); });
+    connect(autoRangeChBox, &QCheckBox::stateChanged, this, [this](int state) {
+        if (state == Qt::CheckState::Checked)
+            manualAxisRange = false;
+        else
+            manualAxisRange = true;
+    });
 
     chview->installEventFilter(this);
 }
@@ -135,7 +164,7 @@ ArincLabelsChart::AddLabel(int channel, int labelIdx)
     constexpr int rect_rounding_radius  = imgsize / 8;
     constexpr int marker_opacity        = 220;
 
-    labelsSeries[labelIdx].first = new QLineSeries{ chart };
+    labelsSeries[labelIdx].first = new LineSeries{ chart };
     auto &series                 = *labelsSeries[labelIdx].first;
 
     auto channel_text = QString{ "Ch: %1" }.arg(channel);
@@ -199,8 +228,8 @@ ArincLabelsChart::AddLabel(int channel, int labelIdx)
 
     chart->addSeries(labelsSeries[labelIdx].first);
 
-    series.attachAxis(yaxis);
-    series.attachAxis(xaxis);
+    series.attachAxis(vaxis);
+    series.attachAxis(haxis);
 
     QObject::connect(&series, &QXYSeries::released, this, &ArincLabelsChart::OnLabelOnChartSelected);
 }
@@ -223,7 +252,7 @@ void
 ArincLabelsChart::wheelEvent(QWheelEvent *evt)
 {
     constexpr qreal single_wheel_tick_value = 120;
-    
+
     auto pagesize = hscroll->pageStep();
     pagesize -= static_cast<qreal>(evt->angleDelta().y()) / (single_wheel_tick_value / 2);
 
@@ -234,15 +263,15 @@ ArincLabelsChart::wheelEvent(QWheelEvent *evt)
         pagesize = hmax;
     }
 
-    auto midval = xaxis->min() + (xaxis->max() - xaxis->min()) / 2;
+    auto midval     = haxis->min() + (haxis->max() - haxis->min()) / 2;
     auto left_bound = midval - static_cast<qreal>(pagesize) / 2;
-    
+
     if (left_bound < hmin)
         left_bound = hmin;
 
     auto right_bound = static_cast<int>(left_bound + pagesize);
 
-    xaxis->setRange(static_cast<int>(left_bound), static_cast<int>(right_bound));
+    haxis->setRange(static_cast<int>(left_bound), static_cast<int>(right_bound));
 }
 
 void
@@ -275,18 +304,6 @@ ArincLabelsChart::_AdjustScrollToAxis(ScrollBar *scroll, qreal min, qreal max)
 }
 
 void
-ArincLabelsChart::AdjustHScroll(qreal min, qreal max)
-{
-    _AdjustScrollToAxis(hscroll, min, max);
-}
-
-void
-ArincLabelsChart::AdjustVScroll(qreal min, qreal max)
-{
-    _AdjustScrollToAxis(vscroll, min, max);
-}
-
-void
 ArincLabelsChart::_AdjustAxisToScroll(QValueAxis *axis, ScrollBar *scroll, int value)
 {
     constexpr qreal minimumValue = 0;
@@ -300,17 +317,6 @@ ArincLabelsChart::_AdjustAxisToScroll(QValueAxis *axis, ScrollBar *scroll, int v
     axis->setRange(static_cast<qreal>(value), static_cast<qreal>(value + scroll->pageStep()));
 }
 
-void
-ArincLabelsChart::OnHScrollValueChanged(int value)
-{
-    _AdjustAxisToScroll(xaxis, hscroll, value);
-}
-
-void
-ArincLabelsChart::OnVScrollValueChanged(int value)
-{
-    _AdjustAxisToScroll(yaxis, vscroll, value);
-}
 void
 ArincLabelsChart::Append(const ArincMsg &msg)
 {
@@ -329,24 +335,34 @@ ArincLabelsChart::Append(const ArincMsg &msg)
     hmax = msg_time + hscroll_overshoot;
     hscroll->setMaximum(static_cast<int>(hmax));
 
-    if ((yaxis->max() - vscroll_overshoot) < msg.labelRaw) {
+    if ((vaxis->max() - vscroll_overshoot) < msg.labelRaw) {
         vmax = static_cast<int>(msg.labelRaw) + vscroll_overshoot;
         vscroll->setMaximum(vmax);
     }
 
-    if (manualAxisRange) {
+    if (manualAxisRange || !labelsSeries[msg.labelRaw].first->MarkerIsVisible()) {
         return;
     }
 
-    if ((yaxis->max() - vscroll_overshoot) < msg.labelRaw) {
-        yaxis->setMax(static_cast<qreal>(vscroll->maximum()));
+    if ((vaxis->max() - vscroll_overshoot) < msg.labelRaw) {
+        vaxis->setMax(static_cast<qreal>(vscroll->maximum()));
     }
 
-    if (xaxis->max() < msg_time || xaxis->min() > msg_time) {
+    if (haxis->max() < msg_time || haxis->min() > msg_time) {
         int x_begin = static_cast<int>(msg_time - hscroll->pageStep() * auto_x_range_change_olddata_percent);
 
-        xaxis->setRange(x_begin, x_begin + hscroll->pageStep());
+        haxis->setRange(x_begin, x_begin + hscroll->pageStep());
     }
+}
+
+void
+ArincLabelsChart::SetLabelVisibility(int label, Qt::CheckState checkstate)
+{
+    bool make_visible = (checkstate == Qt::Checked) ? true : false;
+    
+    labelsSeries[label].first->SetMarkerVisibility(make_visible);
+
+    chart->update();//glitched repaint of labels without this call
 }
 
 bool
@@ -556,25 +572,29 @@ void
 Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 {
     ArincMsg msg;
-    if (decodeConfigsFile != QString{}) {
-        msg.timeArrivalPC = rawData->msg_arrival_time;
-        msg.msgNumber     = rawData->msg_counter;
 
-        for (auto &msgChunk : DTMsgAnatomy) {
-            if (msgChunk.second.activeBits.first / 8 >= rawData->bytes_in_buffer ||
-                msgChunk.second.activeBits.second / 8 >= rawData->bytes_in_buffer) {
-                QMessageBox err{ QMessageBox::Critical, "Data read error", "Not enough bytes in buffer" };
-            }
+    if (decodeConfigsFile == QString{})
+        return;
+
+    msg.timeArrivalPC = rawData->msg_arrival_time;
+    msg.msgNumber     = rawData->msg_counter;
+
+    for (auto &msgChunk : DTMsgAnatomy) {
+        if (msgChunk.second.activeBits.first / 8 >= rawData->bytes_in_buffer ||
+            msgChunk.second.activeBits.second / 8 >= rawData->bytes_in_buffer) {
+            QMessageBox err{ QMessageBox::Critical, "Data read error", "Not enough bytes in buffer" };
         }
-
-        NormalizeMsgItem(rawData, DTMsgAnatomy["Channel"], msg.channel);
-        NormalizeMsgItem(rawData, DTMsgAnatomy["Label"], msg.labelRaw);
-        NormalizeMsgItem(rawData, DTMsgAnatomy["SDI"], msg.SDI);
-        NormalizeMsgItem(rawData, DTMsgAnatomy["Data"], msg.valueRaw);
-        NormalizeMsgItem(rawData, DTMsgAnatomy["SSM"], msg.SSM);
-        NormalizeMsgItem(rawData, DTMsgAnatomy["Parity"], msg.parity);
-        NormalizeMsgItem(rawData, DTMsgAnatomy["Time"], msg.DTtimeRaw);
     }
 
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Channel"], msg.channel);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Label"], msg.labelRaw);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["SDI"], msg.SDI);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Data"], msg.valueRaw);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["SSM"], msg.SSM);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Parity"], msg.parity);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Time"], msg.DTtimeRaw);
+
+    msg.label.InitByCode(msg.labelRaw);
     messages.push_back(msg);
+    labels[msg.label].push_back(msg);
 }

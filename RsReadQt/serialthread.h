@@ -7,7 +7,13 @@
 
 #include <QMainWindow>
 #include <QTabWidget>
+#include <QTreeWidget>
+#include <QTreeView>
+#include <QPlainTextEdit>
+#include <qlistview.h>
+#include <qlistwidget.h>
 
+#include <QList>
 #include <QTime>
 #include <qthread.h>
 #include <qmutex.h>
@@ -20,10 +26,6 @@
 #include <QScatterSeries>
 #include <QLineSeries>
 #include <QSplineSeries>
-
-#include <QPlainTextEdit>
-#include <qlistview.h>
-#include <qlistwidget.h>
 
 #include "arinc.hpp"
 #include "datatrack.hpp"
@@ -58,6 +60,39 @@ class ReadingThread : public QThread {
     bool   isPaused = false;
 };
 
+class LabelsInfo : public QTreeWidget {
+    Q_OBJECT
+
+  public:
+    enum Column {
+        Name = 0,
+        FirstOccurrence,
+        LastOccurrence,
+        HitCount,
+        MakeBeep,
+        ShowOnDiagram
+    };
+
+    template<typename... Args>
+    LabelsInfo(Args... args)
+      : QTreeWidget(std::forward<Args>(args)...)
+    { }
+
+    void Update(const ArincMsg &msg, int counter);
+    bool ShouldBeepOnArival(int label);
+
+  public slots:
+    void OnLabelPropertyChanged(QTreeWidgetItem *item, int column);
+
+signals:
+    void LabelMakeSoundChoiceChanged(int label, Qt::CheckState checkstate);
+    void LabelVisibilityChoiceChanged(int label, Qt::CheckState checkstate);
+
+    private:
+    std::map<int, QTreeWidgetItem *> labels;
+    bool skipDataChangeEvent = false;
+};
+
 class OutputThread : public QThread {
     Q_OBJECT
 
@@ -66,27 +101,26 @@ class OutputThread : public QThread {
     OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
                  std::shared_ptr<void>                   dataBridgeConfigs,
                  QTabWidget                             *tabs,
-                 QMainWindow *parent = nullptr);
+                 QMainWindow                            *parent = nullptr);
     ~OutputThread();
 
     void NormalizeRawData(const auto &data, QString &);
     void ShowDiagram();
-    
 
   public slots:
     void ShowNewData();
     bool SaveSession();
     void ScrollAndSelectMsg(uint64_t msgN);
     void testSlot(int);
+    void SetLabelMakeSound(int label, Qt::CheckState checkstate);
 
   private:
     QMainWindow           *myParent = nullptr;
     QTabWidget            *tabWgt;
     std::unique_ptr<Arinc> arinc;
-    ArincLabelsChart       *arincChart = nullptr;
+    ArincLabelsChart      *arincChart = nullptr;
 
-    deque_s<std::shared_ptr<::dataPacket>> &dataToOutput;
+    deque_s<std::shared_ptr<::dataPacket>> &rawData;
     QListWidget                            *rawMessages = nullptr;
-
-    
+    LabelsInfo                       *labelsInfo  = nullptr;
 };
