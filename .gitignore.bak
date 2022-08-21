@@ -10,9 +10,6 @@
 *.userosscache
 *.sln.docstates
 
-# Visual lint
-.visuallint/
-
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
