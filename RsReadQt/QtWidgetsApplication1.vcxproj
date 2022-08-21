@@ -180,7 +180,7 @@
     <QtMoc Include="arinc.hpp" />
     <ClInclude Include="datatrack.hpp" />
     <ClInclude Include="global_configs.hpp" />
-    <QtMoc Include="labelfilter.h" />
+    <ClInclude Include="labelfilter.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Serial.h" />
     <QtMoc Include="TextEdit.h" />

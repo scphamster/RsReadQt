@@ -30,6 +30,7 @@
 #include "arinc.hpp"
 #include <Windows.h>
 
+
 ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
                              deque_s<std::shared_ptr<::dataPacket>> &data,
                              QObject                                *parent)
@@ -78,32 +79,47 @@ Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
   , myParent(parent)
   , arinc{ std::make_unique<Arinc>(std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName()) }
 {
-    // arincChart = new ArincLabelsChart{ parent };
     arincChart = std::make_unique<ArincLabelsChart>(parent);
+    connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
 
+    CreateRawOutput();
+    CreateLabelsInfo();
+    CreateFilter();
+}
+
+Output::~Output() { }
+
+void
+Output::CreateRawOutput()
+{
     rawMessages = new QListWidget{ tabWgt };
     rawMessages->setUniformItemSizes(true);   // for better performance
-    tabWgt->addTab(rawMessages, "Raw");
+    rawMessages->setAlternatingRowColors(true);
 
+    tabWgt->addTab(rawMessages, "Raw");
+}
+
+void
+Output::CreateLabelsInfo()
+{
     labelsInfo = new LabelsInfo{ tabWgt };
     labelsInfo->setSortingEnabled(true);
     labelsInfo->sortByColumn(0, Qt::SortOrder::DescendingOrder);
 
     auto labels = new QTreeWidgetItem{};
+    
     labels->setText(0, "Label");
     labels->setText(1, "First occurrence");
     labels->setText(2, "Last occurrence");
     labels->setText(3, "Hit count");
     labels->setText(4, "Make beep");
     labels->setText(5, "Show on diagram");
+    
     labelsInfo->setHeaderItem(labels);
+    labelsInfo->setAlternatingRowColors(true);
 
     tabWgt->addTab(labelsInfo, "Labels");
 
-    labelFilter = new LabelFilter{ tabWgt };
-    tabWgt->addTab(labelFilter, "Filter");
-
-    connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
     connect(labelsInfo, &LabelsInfo::itemChanged, labelsInfo, &LabelsInfo::OnLabelInfoChanged);
     connect(labelsInfo,
             &LabelsInfo::LabelVisibilityChoiceChanged,
@@ -111,7 +127,15 @@ Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
             &ArincLabelsChart::SetLabelVisibility);
 }
 
-Output::~Output() { }
+void
+Output::CreateFilter()
+{
+    auto newmodel = new LabelModel{};
+    
+    auto filter = new LabelFilter<QTreeView, LabelModel, LabelFilterDelegate>{ tabWgt, newmodel};
+    filter->GetView()->sortByColumn(0, Qt::SortOrder::AscendingOrder);
+    tabWgt->addTab(filter->GetView(), "Filter");
+}
 
 void
 Output::NormalizeRawData(const auto &data, QString &appendHere)

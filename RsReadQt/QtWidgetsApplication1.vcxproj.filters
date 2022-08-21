@@ -75,9 +75,6 @@
     <QtMoc Include="arinc.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="labelfilter.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="serialconfig.ui">
@@ -98,6 +95,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="labelfilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

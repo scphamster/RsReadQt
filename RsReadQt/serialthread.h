@@ -29,7 +29,7 @@
 
 #include "arinc.hpp"
 #include "datatrack.hpp"
-#include "labelfilter.h"
+#include "labelfilter.hpp"
 #include "Serial.h"   //this header should be last
 // DT = DataTrack
 
@@ -104,6 +104,9 @@ class Output : public QObject {
            QMainWindow                            *parent = nullptr);
     ~Output();
 
+    void CreateRawOutput();
+    void CreateLabelsInfo();
+    void CreateFilter();
     void NormalizeRawData(const auto &data, QString &);
     void ShowDiagram();
 
@@ -122,5 +125,5 @@ class Output : public QObject {
     deque_s<std::shared_ptr<::dataPacket>> &rawData;
     QListWidget                            *rawMessages = nullptr;
     LabelsInfo                             *labelsInfo  = nullptr;
-    LabelFilter                            *labelFilter = nullptr;
+    //LabelFilter                            *labelFilter = nullptr;
 };
