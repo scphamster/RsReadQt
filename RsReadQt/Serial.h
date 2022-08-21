@@ -32,12 +32,6 @@
 #endif
 #endif
 
-#ifdef DEBUG
-#define assert_msg(__cond, __msg) Q_ASSERT(__cond)
-#else
-#define assert_msg(__cond, __msg) __cond
-#endif
-
 constexpr int  SERIAL_DATA_BUFSIZE = 32;
 constexpr auto SERIAL_PORT_PREFIX  = "\\\\.\\";
 
@@ -99,7 +93,7 @@ struct superMap : public std::map<_Key, _Tp, _Compare, _Alloc> {
         if (this->find(k) == this->end())
             return false;
         else {
-            dest = std::move(std::pair{ k, map::at(k) });
+            dest = std::pair{ k, map::at(k) };
             return true;
         }
     }
@@ -108,7 +102,7 @@ struct superMap : public std::map<_Key, _Tp, _Compare, _Alloc> {
     {
         for (const auto [key, value] : *this) {
             if (value == value_tofind) {
-                dest = std::move(std::pair{ key, value });
+                dest = std::pair{ key, value };
 
                 return true;
             }
@@ -127,7 +121,7 @@ struct superMap : public std::map<_Key, _Tp, _Compare, _Alloc> {
 
             for (const auto &val : *this) {
                 if (iterator == idx) {
-                    dest = std::move(std::pair{ val.first, val.second });
+                    dest = std::pair{ val.first, val.second };
                     return true;
                 }
 
@@ -149,11 +143,9 @@ struct superMap : public std::map<_Key, _Tp, _Compare, _Alloc> {
 
     bool ContainsValue(_Tp value_tofind) const noexcept
     {
-        for (const auto &[key, value] : *this) {
-            if (value == value_tofind)
-                return true;
-        }
-        return false;
+        return std::any_of(this->begin(), this->end(), [&value_tofind](const auto &pair) {
+            return pair.second == value_tofind;
+        });
     }
 
     std::vector<_Tp> GetAllValues() const noexcept
@@ -177,12 +169,12 @@ template<typename PairType, typename MapType, typename ValueType>
 struct _helper {
     bool ConvToPairByValueIfAny(PairType &dest, const MapType &dataset, const ValueType &requestedValue)
     {
-        auto iterator = std::find_if(dataset.begin(), dataset.end(), [&requestedValue](auto &pair) {
+        auto iterator = std::find_if(dataset.begin(), dataset.end(), [&requestedValue](const auto &pair) {
             return (pair.second == requestedValue);
         });
 
         if (iterator == dataset.end()) {
-            assert_msg(false, _T("Value is: ") + requestedValue);
+            false, _T("Value is: ") + requestedValue;
             return false;
         }
 
@@ -223,7 +215,10 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
             {
                 avlblPorts[i] = portname;
 
-                assert_msg(GetLastError() != ERROR_INSUFFICIENT_BUFFER, _T("Not insufficient buffer for path"));
+                if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+                    //todo: log error
+                    return;
+                }
             }
         }
     }

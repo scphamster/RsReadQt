@@ -33,9 +33,5 @@ class MainWindow : public QMainWindow,
     deque_s<std::shared_ptr<dataPacket>> databridgeData;
 
     ReadingThread *readerThr = nullptr;
-    OutputThread  *writerThr = nullptr;
-
-    // std::shared_ptr<QChart>     chart;
-    QChart     *chart = nullptr;
-    QChartView *chview;
+    Output  *writerThr = nullptr;
 };

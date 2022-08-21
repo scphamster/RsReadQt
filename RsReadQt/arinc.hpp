@@ -54,16 +54,16 @@ class ArincLabel : protected std::pair<int, QString> {
 class ArincMsg {
   public:
     QDateTime  timeArrivalPC;
-    int        channel;
+    int        channel = 0;
     ArincLabel label;
-    uint8_t    labelRaw;
-    uint64_t   valueRaw;
-    double     value;
-    uint8_t    SSM;
-    uint8_t    parity;
-    uint64_t   DTtimeRaw;
+    uint8_t    labelRaw = 0;
+    uint64_t   valueRaw = 0;
+    double     value = 0;
+    uint8_t    SSM = 0;
+    uint8_t    parity = 0;
+    uint64_t   DTtimeRaw = 0;
     QTime      DTtime;
-    uint8_t    SDI;
+    uint8_t    SDI = 0;
     uint64_t   msgNumber = 0;
 
     bool msgIsHealthy = false;
@@ -74,7 +74,7 @@ class ScrollBar : public QScrollBar {
 
   public:
     template<typename... Args>
-     ScrollBar(Args... args)
+     explicit ScrollBar(Args... args)
       : QScrollBar(std::forward<decltype(args)>(args)...)
     { }
 
@@ -93,7 +93,7 @@ class LineSeries : public QLineSeries {
 
   public:
     template<typename... Args>
-    LineSeries(Args... args)
+    explicit LineSeries(Args... args)
       : QLineSeries(std::forward<Args>(args)...)
     { }
 
@@ -111,7 +111,7 @@ class ArincLabelsChart : public QWidget {
     Q_OBJECT
   public:
     ArincLabelsChart() = default;
-    ArincLabelsChart(QWidget *parent);
+    explicit ArincLabelsChart(QWidget *parent);
     void OnLabelOnChartSelected(const QPointF &);
 
     bool GetDataFromLabelOnChart(const QPointF &);
@@ -120,9 +120,10 @@ class ArincLabelsChart : public QWidget {
     bool IsSomeLabelSelected() const noexcept { return idxOfSelectedMsg != ItemSelection::NOTSELECTED; }
     void AddLabel(int channel, int labelIdx);
     void Append(const ArincMsg &msg);
+    auto GetLabelMarker(int label) { return labelsSeries.at(label).first->lightMarker(); }
 
     enum ItemSelection {
-        NOTSELECTED = UINT64_MAX
+        NOTSELECTED = INT64_MAX
     };
 
   protected:
@@ -130,6 +131,7 @@ class ArincLabelsChart : public QWidget {
     void wheelEvent(QWheelEvent *evt) override;
     void _AdjustAxisToScroll(QValueAxis *axis, ScrollBar *scroll, int value);
     void _AdjustScrollToAxis(ScrollBar *scroll, qreal min, qreal max);
+
 
   signals:
     void MsgOnChartBeenSelected(uint64_t msgN);
@@ -170,7 +172,7 @@ class ArincLabelsChart : public QWidget {
 class Arinc {
   public:
     Arinc() = default;
-    Arinc(QString decodingFile);
+    explicit Arinc(const QString &decode_file_name);
 
     void           GetDecodeConfigsFromFile();
     void           NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
@@ -185,7 +187,7 @@ class Arinc {
 
     std::map<QString, DTWordField> DTMsgAnatomy;
 
-    QString decodeConfigsFile;
+    QString decodeSpecsFileName;
 
     bool     newConfigsFile      = false;
     bool     anatomyIsConfigured = false;
