@@ -49,7 +49,7 @@ ReadingThread::Pause(bool makePause)
 {
     isPaused = makePause;
 
-    if (!makePause)
+    if (not makePause)
         serDevice.Flush();
 }
 
@@ -69,21 +69,21 @@ ReadingThread::run()
     }
 }
 
-OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
-                           std::shared_ptr<void>                   dataBridgeConfigs,
-                           QTabWidget                             *tabs,
-                           QMainWindow                            *parent)
+Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
+               std::shared_ptr<void>                   dataBridgeConfigs,
+               QTabWidget                             *tabs,
+               QMainWindow                            *parent)
   : rawData{ data }
   , tabWgt{ tabs }
   , myParent(parent)
   , arinc{ std::make_unique<Arinc>(std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName()) }
 {
-    //arinc      = ;
-    arincChart = new ArincLabelsChart{ parent };
+    // arincChart = new ArincLabelsChart{ parent };
+    arincChart = std::make_unique<ArincLabelsChart>(parent);
 
     rawMessages = new QListWidget{ tabWgt };
     rawMessages->setUniformItemSizes(true);   // for better performance
-    tabWgt->addTab(rawMessages, "Raw output");
+    tabWgt->addTab(rawMessages, "Raw");
 
     labelsInfo = new LabelsInfo{ tabWgt };
     labelsInfo->setSortingEnabled(true);
@@ -98,25 +98,23 @@ OutputThread::OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
     labels->setText(5, "Show on diagram");
     labelsInfo->setHeaderItem(labels);
 
-    tabWgt->addTab(labelsInfo, "Labels info");
+    tabWgt->addTab(labelsInfo, "Labels");
 
-    connect(arincChart, &ArincLabelsChart::MsgOnChartBeenSelected, this, &OutputThread::ScrollAndSelectMsg);
-    connect(labelsInfo, &LabelsInfo::itemChanged, labelsInfo, &LabelsInfo::OnLabelPropertyChanged);
-    connect(labelsInfo, &LabelsInfo::LabelMakeSoundChoiceChanged, this, &OutputThread::SetLabelMakeSound);
-    connect(labelsInfo, &LabelsInfo::LabelVisibilityChoiceChanged, arincChart, &ArincLabelsChart::SetLabelVisibility);
+    labelFilter = new LabelFilter{ tabWgt };
+    tabWgt->addTab(labelFilter, "Filter");
+
+    connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
+    connect(labelsInfo, &LabelsInfo::itemChanged, labelsInfo, &LabelsInfo::OnLabelInfoChanged);
+    connect(labelsInfo,
+            &LabelsInfo::LabelVisibilityChoiceChanged,
+            arincChart.get(),
+            &ArincLabelsChart::SetLabelVisibility);
 }
 
-OutputThread::~OutputThread() { }
+Output::~Output() { }
 
 void
-OutputThread::ShowDiagram()
-{
-    const auto &data = arinc->messages.back();
-    arincChart->Append(data);
-}
-
-void
-OutputThread::NormalizeRawData(const auto &data, QString &appendHere)
+Output::NormalizeRawData(const auto &data, QString &appendHere)
 {
     arinc->NormalizeAndStoreMsg(data);
 
@@ -135,7 +133,14 @@ OutputThread::NormalizeRawData(const auto &data, QString &appendHere)
 }
 
 void
-OutputThread::ShowNewData(void)
+Output::ShowDiagram()
+{
+    const auto &data = arinc->messages.back();
+    arincChart->Append(data);
+}
+
+void
+Output::ShowNewData(void)
 {
     if (rawData.empty() == true) {
         return;
@@ -159,31 +164,22 @@ OutputThread::ShowNewData(void)
 
     rawMessages->addItem(rawOutput);
 
-    if (!arincChart->IsSomeLabelSelected()) {
+    if (not arincChart->IsSomeLabelSelected()) {
         rawMessages->scrollToBottom();
     }
 
-    labelsInfo->Update(arinc->LastMsg(), arinc->labels.at(arinc->LastMsg().label).size());
-
     ShowDiagram();
-    
+
+    labelsInfo->Update(arinc->LastMsg(),
+                       arinc->labels.at(arinc->LastMsg().label).size(),
+                       arincChart->GetLabelMarker(arinc->LastMsg().labelRaw));
+
     if (labelsInfo->ShouldBeepOnArival(arinc->LastMsg().labelRaw))
         Beep((arinc->LastMsg().labelRaw + 100) * 4, 100);
 }
 
-void
-OutputThread::ScrollAndSelectMsg(uint64_t item)
-{
-    rawMessages->scrollToItem(rawMessages->item(arincChart->GetIdxOfSelectedMessage()));
-    rawMessages->setCurrentRow((arincChart->GetIdxOfSelectedMessage()));
-}
-
-void
-OutputThread::testSlot(int)
-{ }
-
 bool
-OutputThread::SaveSession()
+Output::SaveSession()
 {
     auto saveto_fileAddress = QFileDialog::getSaveFileName(nullptr, tr("Save session to file"), "LastSession.txt");
 
@@ -201,42 +197,44 @@ OutputThread::SaveSession()
 }
 
 void
-OutputThread::SetLabelMakeSound(int label, Qt::CheckState checkstate)
+Output::ScrollAndSelectMsg(uint64_t item)
 {
-    // todo: implement
+    rawMessages->scrollToItem(rawMessages->item(arincChart->GetIdxOfSelectedMessage()));
+    rawMessages->setCurrentRow((arincChart->GetIdxOfSelectedMessage()));
 }
 
 void
-LabelsInfo::OnLabelPropertyChanged(QTreeWidgetItem *item, int column)
+LabelsInfo::OnLabelInfoChanged(QTreeWidgetItem *item, int column)
 {
     if (skipDataChangeEvent) {
-        // skipDataChangeEvent = false;
         return;
     }
 
-    auto lbl = item->text(0);
+    auto lbl_num = item->text(LabelsInfo::Column::Name).toInt(nullptr, 8);
 
-    if (column == 4) {
-        emit LabelMakeSoundChoiceChanged(lbl.toInt(nullptr, 8), item->checkState(4));
-    }
-
-    else if (column == 5) {
-        emit LabelVisibilityChoiceChanged(lbl.toInt(nullptr, 8), item->checkState(5));
+    if (column == LabelsInfo::Column::ShowOnDiagram) {
+        emit LabelVisibilityChoiceChanged(lbl_num, item->checkState(5));
         return;
     }
 }
 
 void
-LabelsInfo::Update(const ArincMsg &msg, int counter)
+LabelsInfo::Update(const ArincMsg &msg, int counter, QImage &&img)
 {
-    if (!labels.contains(msg.labelRaw)) {
+    if (not labels.contains(msg.labelRaw)) {
         auto label = new QTreeWidgetItem{};
-        label->setText(0, QString::number(msg.labelRaw, 8));
-        label->setText(1, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
-        label->setText(2, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
-        label->setData(3, Qt::ItemDataRole::EditRole, 1);
-        label->setCheckState(4, Qt::CheckState::Unchecked);
-        label->setCheckState(5, Qt::Checked);
+
+        label->setText(LabelsInfo::Column::Name, QString::number(msg.labelRaw, 8));
+        label->setData(
+          LabelsInfo::Column::Name,
+          Qt::ItemDataRole::DecorationRole,
+          img.scaled(20, 20, Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+        label->setText(LabelsInfo::Column::FirstOccurrence, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
+        label->setText(LabelsInfo::Column::LastOccurrence, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
+        label->setData(LabelsInfo::Column::HitCount, Qt::ItemDataRole::EditRole, 1);
+        label->setCheckState(LabelsInfo::Column::MakeBeep, Qt::CheckState::Unchecked);
+        label->setCheckState(LabelsInfo::Column::ShowOnDiagram, Qt::Checked);
+
         labels[msg.labelRaw] = label;
 
         addTopLevelItem(label);
@@ -255,7 +253,7 @@ LabelsInfo::Update(const ArincMsg &msg, int counter)
 bool
 LabelsInfo::ShouldBeepOnArival(int label)
 {
-    if (!labels.contains(label))
+    if (not labels.contains(label))
         return false;
 
     return (labels.at(label)->checkState(LabelsInfo::Column::MakeBeep) == Qt::Checked) ? true : false;

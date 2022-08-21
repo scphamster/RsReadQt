@@ -58,6 +58,9 @@
     <ClCompile Include="arinc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="labelfilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="serialconfig.h">
@@ -70,6 +73,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="arinc.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="labelfilter.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -91,10 +97,18 @@
     <ClInclude Include="datatrack.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="ClassDiagram1.cd" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RsReadQt.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

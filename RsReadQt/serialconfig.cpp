@@ -67,7 +67,7 @@ SerialConfig::RetreiveSettingsFromSystem()
     }
     else {
         auto avlblPorts2 = serialConfigs->GetAvlblComPorts();
-        if (!serialConfigs->PreviouslySelectedPortIsPresent()) {
+        if (not serialConfigs->PreviouslySelectedPortIsPresent()) {
             serialConfigs->SetPortToUndefined();
         }
 
@@ -128,56 +128,56 @@ SerialConfig::OnSelportSelected(const QString &newSelection)
     if (newSelection == localSelections["Port"].second)
         return;
 
-    assert_msg(serialConfigs->GetAvlblComPorts().ConvToPairByValueIfAny(newSelection, localSelections["Port"]),
-               "Error while saving selection to configs container");
+    serialConfigs->GetAvlblComPorts().ConvToPairByValueIfAny(newSelection, localSelections["Port"]),
+               "Error while saving selection to configs container";
 }
 
 void
 SerialConfig::OnSelbaudrateSelected(const QString &newSelection)
 {
-    assert_msg(serialConfigs->GetAvlblBaudrates().ConvToPairByValueIfAny(newSelection, localSelections["Baudrate"]),
-               "Error while saving selection to configs container");
+    serialConfigs->GetAvlblBaudrates().ConvToPairByValueIfAny(newSelection, localSelections["Baudrate"]),
+               "Error while saving selection to configs container";
 }
 
 void
 SerialConfig::OnSeldatabitsSelected(const QString &newSelection)
 {
-    assert_msg(serialConfigs->GetAvlblDatabits().ConvToPairByValueIfAny(newSelection, localSelections["Databits"]),
-               "Error while saving selection to configs container");
+    serialConfigs->GetAvlblDatabits().ConvToPairByValueIfAny(newSelection, localSelections["Databits"]),
+               "Error while saving selection to configs container";
 }
 
 void
 SerialConfig::OnSelstopbitsSelected(const QString &newSelection)
 {
-    assert_msg(serialConfigs->GetAvlblStopbits().ConvToPairByValueIfAny(newSelection, localSelections["Stopbits"]),
-               "Error while saving selection to configs container");
+    serialConfigs->GetAvlblStopbits().ConvToPairByValueIfAny(newSelection, localSelections["Stopbits"]),
+               "Error while saving selection to configs container";
 }
 
 void
 SerialConfig::OnSelparitySelected(const QString &newSelection)
 {
-    assert_msg(serialConfigs->GetAvlblParities().ConvToPairByValueIfAny(newSelection, localSelections["Parity"]),
-               "Error while saving selection to configs container");
+    serialConfigs->GetAvlblParities().ConvToPairByValueIfAny(newSelection, localSelections["Parity"]),
+               "Error while saving selection to configs container";
 }
 
 void
 SerialConfig::OnApplyClick()
 {
-    assert_msg(serialConfigs->SetPortByName(localSelections["Port"].second), "Error occured while saving configuration: Port");
+    serialConfigs->SetPortByName(localSelections["Port"].second), "Error occured while saving configuration: Port";
 
-    assert_msg(serialConfigs->SetBaudrateByValue(localSelections["Baudrate"].second),
-               "Error occured while saving configuration: Baudrate");
+    serialConfigs->SetBaudrateByValue(localSelections["Baudrate"].second),
+               "Error occured while saving configuration: Baudrate";
 
-    assert_msg(serialConfigs->SetDatabitsByValue(localSelections["Databits"].second),
-               "Error occured while saving configuration: Databits");
+    serialConfigs->SetDatabitsByValue(localSelections["Databits"].second),
+               "Error occured while saving configuration: Databits";
 
-    assert_msg(serialConfigs->SetStopbitsByValue(localSelections["Stopbits"].second),
-               "Error occured while saving configuration: Stopbits");
+    serialConfigs->SetStopbitsByValue(localSelections["Stopbits"].second),
+               "Error occured while saving configuration: Stopbits";
 
-    assert_msg(serialConfigs->SetParityByValue(localSelections["Parity"].second),
-               "Error occured while saving configuration: Parity");
+    serialConfigs->SetParityByValue(localSelections["Parity"].second),
+               "Error occured while saving configuration: Parity";
 
-    assert_msg(serialConfigs->SetMsgLen(spinboxMsgLen->value()), "bytes in msg value are not in limit (1 - 8)");
+    serialConfigs->SetMsgLen(spinboxMsgLen->value()), "bytes in msg value are not in limit (1 - 8)";
 
     SaveSettingsToSystem();
 

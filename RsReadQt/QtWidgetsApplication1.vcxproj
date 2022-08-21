@@ -77,6 +77,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\dev\Qt\6.3.1\msvc2019_64\include\QtCore;C:\dev\Qt\6.3.1\msvc2019_64\include\QtGui;C:\dev\Qt\6.3.1\msvc2019_64\include\QtCharts;C:\dev\Qt\6.3.1\msvc2019_64\include\QtWidgets;C:\dev\Qt\6.3.1\msvc2019_64\include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -159,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.cpp" />
     <ClCompile Include="arinc.cpp" />
+    <ClCompile Include="labelfilter.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Serial.cpp" />
     <ClCompile Include="serialconfig.cpp" />
@@ -178,6 +180,8 @@
     <QtMoc Include="arinc.hpp" />
     <ClInclude Include="datatrack.hpp" />
     <ClInclude Include="global_configs.hpp" />
+    <QtMoc Include="labelfilter.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Serial.h" />
     <QtMoc Include="TextEdit.h" />
     <QtMoc Include="serialthread.h" />
@@ -186,6 +190,9 @@
     <None Include="ClassDiagram.cd" />
     <None Include="ClassDiagram1.cd" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RsReadQt.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

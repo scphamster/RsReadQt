@@ -40,16 +40,6 @@ MainWindow::~MainWindow()
             // readerThr = nullptr;
         }
     }
-
-    if (writerThr != nullptr) {
-        if (writerThr->isRunning()) {
-            writerThr->quit();
-            writerThr->wait();
-            // writerThr = nullptr;
-        }
-    }
-
-    databridgeData.clear();
 }
 
 void
@@ -81,22 +71,22 @@ MainWindow::OnStartSerialClicked()
     }
 
     if (readerThr != nullptr && writerThr != nullptr) {
-        if (readerThr->isRunning() && writerThr->isRunning()) {
+        if (readerThr->isRunning()) {
             readerThr->Pause(false);
             return;
         }
     }
 
-    writerThr = new OutputThread(databridgeData, databridgeConfig, outputTabs, this);
-    connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater, Qt::DirectConnection);
+    writerThr = new Output(databridgeData, databridgeConfig, outputTabs, this);
+    //connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater);
 
     readerThr = new ReadingThread(databridgeConfig, databridgeData, this);
-    connect(readerThr, &QThread::finished, readerThr, &QThread::deleteLater, Qt::DirectConnection);
+    connect(readerThr, &QThread::finished, readerThr, &QThread::deleteLater);
 
-    connect(readerThr, &ReadingThread::notificationDataArrived, writerThr, &OutputThread::ShowNewData);
-    connect(saveSessionAs_menu, &QAction::triggered, writerThr, &OutputThread::SaveSession);
+    connect(readerThr, &ReadingThread::notificationDataArrived, writerThr, &Output::ShowNewData);
+    connect(saveSessionAs_menu, &QAction::triggered, writerThr, &Output::SaveSession);
 
-    writerThr->start();
+    //writerThr->start();
     readerThr->start();
 }
 

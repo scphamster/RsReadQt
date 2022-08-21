@@ -29,6 +29,7 @@
 
 #include "arinc.hpp"
 #include "datatrack.hpp"
+#include "labelfilter.h"
 #include "Serial.h"   //this header should be last
 // DT = DataTrack
 
@@ -78,31 +79,30 @@ class LabelsInfo : public QTreeWidget {
       : QTreeWidget(std::forward<Args>(args)...)
     { }
 
-    void Update(const ArincMsg &msg, int counter);
+    void Update(const ArincMsg &msg, int counter, QImage &&);
     bool ShouldBeepOnArival(int label);
 
   public slots:
-    void OnLabelPropertyChanged(QTreeWidgetItem *item, int column);
+    void OnLabelInfoChanged(QTreeWidgetItem *item, int column);
 
-signals:
-    void LabelMakeSoundChoiceChanged(int label, Qt::CheckState checkstate);
+  signals:
     void LabelVisibilityChoiceChanged(int label, Qt::CheckState checkstate);
 
-    private:
+  private:
     std::map<int, QTreeWidgetItem *> labels;
-    bool skipDataChangeEvent = false;
+    bool                             skipDataChangeEvent = false;
 };
 
-class OutputThread : public QThread {
+class Output : public QObject {
     Q_OBJECT
 
   public:
-    OutputThread() = delete;
-    OutputThread(deque_s<std::shared_ptr<::dataPacket>> &data,
-                 std::shared_ptr<void>                   dataBridgeConfigs,
-                 QTabWidget                             *tabs,
-                 QMainWindow                            *parent = nullptr);
-    ~OutputThread();
+    Output() = delete;
+    Output(deque_s<std::shared_ptr<::dataPacket>> &data,
+           std::shared_ptr<void>                   dataBridgeConfigs,
+           QTabWidget                             *tabs,
+           QMainWindow                            *parent = nullptr);
+    ~Output();
 
     void NormalizeRawData(const auto &data, QString &);
     void ShowDiagram();
@@ -111,16 +111,16 @@ class OutputThread : public QThread {
     void ShowNewData();
     bool SaveSession();
     void ScrollAndSelectMsg(uint64_t msgN);
-    void testSlot(int);
-    void SetLabelMakeSound(int label, Qt::CheckState checkstate);
 
   private:
     QMainWindow           *myParent = nullptr;
     QTabWidget            *tabWgt;
     std::unique_ptr<Arinc> arinc;
-    ArincLabelsChart      *arincChart = nullptr;
+    // ArincLabelsChart      *arincChart = nullptr;
+    std::unique_ptr<ArincLabelsChart> arincChart;
 
     deque_s<std::shared_ptr<::dataPacket>> &rawData;
     QListWidget                            *rawMessages = nullptr;
-    LabelsInfo                       *labelsInfo  = nullptr;
+    LabelsInfo                             *labelsInfo  = nullptr;
+    LabelFilter                            *labelFilter = nullptr;
 };

@@ -1,4 +1,4 @@
-#include <QJsonObject>
+#include <qjsonobject.h>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonValue>
@@ -28,7 +28,6 @@ LineSeries::SetMarkerVisibility(bool make_visible)
         setSelectedLightMarker(_selectedLightMarker);
         isVisible = make_visible;
     }
-
 }
 
 ArincLabelsChart::ArincLabelsChart(QWidget *mainWindow)
@@ -99,7 +98,7 @@ ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
 {
     int label = static_cast<int>(atPoint.y());
 
-    if (!labelsSeries.contains(label))
+    if (not labelsSeries.contains(label))
         return false;
 
     const auto &dataVector = labelsSeries.at(label).second;
@@ -324,7 +323,7 @@ ArincLabelsChart::Append(const ArincMsg &msg)
     constexpr auto  hscroll_overshoot                   = 10;
     constexpr qreal auto_x_range_change_olddata_percent = 0.3;
 
-    if (!labelsSeries.contains(msg.labelRaw))
+    if (not labelsSeries.contains(msg.labelRaw))
         AddLabel(msg.channel, msg.labelRaw);
 
     auto msg_time = (-1) * static_cast<qreal>(msg.timeArrivalPC.msecsTo(startOfOperation)) / 1000;
@@ -379,25 +378,20 @@ ArincLabelsChart::eventFilter(QObject *obj, QEvent *evt)
         return true;
     }
 
-    if (evt->type() == QEvent::Type::ScrollPrepare) {
-        int i = 1;
-        return true;
-    }
-
-    auto ev = dynamic_cast<QScrollEvent *>(evt);
-
     return false;
 }
 
-Arinc::Arinc(QString decodingFile)
-  : decodeConfigsFile{ decodingFile }
+Arinc::Arinc(const QString &decode_file_name)
+  : decodeSpecsFileName{ decode_file_name }
 {
-    if (decodeConfigsFile == QString{}) {
+    if (decodeSpecsFileName.isEmpty()) {
         auto nofile = QMessageBox{
             QMessageBox::Icon::Critical,
             "File error",
             "No file specified for DataTrack message decoding",
         };
+
+        nofile.exec();
     }
 
     GetDecodeConfigsFromFile();
@@ -406,7 +400,7 @@ Arinc::Arinc(QString decodingFile)
 void
 Arinc::GetDecodeConfigsFromFile()
 {
-    auto jsonfile = QFile{ decodeConfigsFile };
+    auto jsonfile = QFile{ decodeSpecsFileName };
     jsonfile.open(QIODeviceBase::OpenModeFlag::ReadOnly);
     auto fileContents = jsonfile.readAll();
     jsonfile.close();
@@ -419,7 +413,7 @@ Arinc::GetDecodeConfigsFromFile()
     if (err.error != QJsonParseError::NoError) {
         QMessageBox errorMsg{ QMessageBox::Warning,
                               "Json file Error",
-                              "Error occured during json file \" " + decodeConfigsFile +
+                              "Error occured during json file \" " + decodeSpecsFileName +
                                 "\" opening, Error: " + err.errorString() };
 
         assert(0);
@@ -550,8 +544,6 @@ Arinc::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, 
         container &= mask;
     }
     else {
-        uint64_t allButFirst = container & 0xFFffFFff00UL;
-
         auto lastByteUnusedBitsNum = configs.activeBits.first % 8;
         auto bytesNum              = firstByteNum - lastByteNum;
 
@@ -573,7 +565,7 @@ Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 {
     ArincMsg msg;
 
-    if (decodeConfigsFile == QString{})
+    if (decodeSpecsFileName == QString{})
         return;
 
     msg.timeArrivalPC = rawData->msg_arrival_time;
