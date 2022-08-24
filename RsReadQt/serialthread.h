@@ -28,11 +28,12 @@
 #include <QSplineSeries>
 
 #include "arinc.hpp"
+#include "arinc_chart.hpp"
 #include "datatrack.hpp"
 #include "labelfilter.hpp"
 #include "Serial.h"   //this header should be last
-// DT = DataTrack
 
+// DT = DataTrack
 #ifndef DEBUG
 #ifdef assert
 #undef assert
@@ -125,5 +126,5 @@ class Output : public QObject {
     deque_s<std::shared_ptr<::dataPacket>> &rawData;
     QListWidget                            *rawMessages = nullptr;
     LabelsInfo                             *labelsInfo  = nullptr;
-    //LabelFilter                            *labelFilter = nullptr;
+    LabelConfigsModel                             *labels      = nullptr;
 };

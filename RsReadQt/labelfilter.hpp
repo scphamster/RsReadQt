@@ -1,8 +1,12 @@
 #pragma once
 
+#include <QString>
+#include <QObject>
 #include <QWidget>
 #include <QTableWidget>
 #include <QTreeView>
+#include <QTreeWidget>
+#include <QTreeWidget>
 #include <QStyledItemDelegate>
 #include <QStandardItemModel>
 #include <QStandardItem>
@@ -12,9 +16,58 @@
 
 #include <algorithm>
 
-class LabelModel : public QStandardItemModel {
+#include "arinc.hpp"
+
+class LabelConfigsItem : protected QStandardItem {
   public:
-    enum Column {
+    enum Parameter {
+        Name = 0,
+        FirstOccurrence,
+        LastOccurrence,
+        HitCount,
+        MakeBeep,
+        ShowOnDiagram,
+        Hide,
+        _MAX
+    };
+
+    enum SpecialLabel {
+        New = -2,
+        All = -1
+    };
+
+    LabelConfigsItem(int              label,
+                   const QImage    &label_img        = QImage{},
+                   const QDateTime &first_occurrence = QDateTime{},
+                   int              hit_count        = 0,
+                   bool             make_beep        = false,
+                   Qt::CheckState   show             = Qt::CheckState::Checked,
+                   Qt::CheckState   hide             = Qt::CheckState::Unchecked);
+
+    // setters
+    void SetLabel(int label);
+    void SetFirstOccurrence(const QDateTime &at_moment);
+    void SetLastOccurrence(const QDateTime &at_moment);
+    void SetShowOnDiagram(int status)
+    {
+        params.at(Parameter::ShowOnDiagram)->setCheckState(static_cast<Qt::CheckState>(status));
+    }
+    void SetHide(int status) { params.at(Parameter::Hide)->setCheckState(static_cast<Qt::CheckState>(status)); }
+    void SetShow(int status) { params.at(Parameter::ShowOnDiagram)->setCheckState(static_cast<Qt::CheckState>(status)); }
+    void SetData(Parameter parameter, QVariant *data);
+
+    // getters
+    QList<QStandardItem *> &GetRow() { return params; }
+
+  private:
+    QList<QStandardItem *> params;
+};
+
+class LabelConfigsModel : public QStandardItemModel {
+    // Q_OBJECT
+
+  public:
+    enum Parameter {
         Name = 0,
         FirstOccurrence,
         LastOccurrence,
@@ -25,128 +78,76 @@ class LabelModel : public QStandardItemModel {
         _SIZE
     };
 
-    enum SpecialRows {
-        All = -2,
-        New = -1
-    };
-
     const QList<QString> headerNames{ "Label", "First Occurrence", "Last occurrence", "Hit count", "Make beep", "Show",
                                       "Hide" };
 
     template<typename... Args>
         requires(sizeof...(Args) > 0)
-    explicit LabelModel(Args... args)
+    explicit LabelConfigsModel(Args... args)
       : QStandardItemModel(std::forward<Args>(args)...)
     { }
 
-    LabelModel();
-
-    void AddNewRow(int label = SpecialRows::New);
-};
-
-class LabelFilterDelegate : public QStyledItemDelegate {
-  public:
-    LabelFilterDelegate(QObject *parent = nullptr)
-      : QStyledItemDelegate{ parent }
-    {
-        connect(this, &QStyledItemDelegate::closeEditor, this, &LabelFilterDelegate::OnCloseEditor);
-    }
-
-    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override
-    {
-        if (index.column() == LabelModel::Column::ShowOnDiagram) {
-            auto ch_box = new QCheckBox{ parent };
-            ch_box->setCheckState(Qt::CheckState::Checked);
-
-            return ch_box;
-        }
-
-        return new QLineEdit{ parent };
-    }
-
-    //void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
-    //{
-    //    painter->setBrush(QBrush{ QColor{ Qt::GlobalColor::darkBlue } });
-    //    painter->drawRect(0, 0, 200, 20);
-    //}
+    LabelConfigsModel();
 
   public slots:
-    void OnCloseEditor() { }
-};
-
-template<typename TView = QTreeView, typename TModel = QStandardItemModel, typename TDelegate = QStyledItemDelegate>
-class LabelFilter {
-  public:
-    LabelFilter(QWidget *parent, TModel *model)
-      : view{ new TView{ parent } }
+    void OnDataChange() { }
+    void SetAllHide(int state)
     {
-        view->setModel(model);
-
-        view->hideColumn(LabelModel::Column::FirstOccurrence);
-        view->hideColumn(LabelModel::Column::LastOccurrence);
-        view->hideColumn(LabelModel::Column::HitCount);
-        view->hideColumn(LabelModel::Column::MakeBeep);
-
-
-
-        delegate = new TDelegate{};
-        view->setItemDelegateForColumn(LabelModel::Column::Name, delegate);
+        std::for_each(labels.begin(), labels.end(), [state](auto &label_item) { label_item.second->SetHide(state); });
     }
 
-    TView     *GetView() { return view; }
-    TDelegate *GetDelegate() { return delegate; }
+    void SetAllShow(int state)
+    {
+        std::for_each(labels.begin(), labels.end(), [state](auto &label_item) { label_item.second->SetShow(state); });
+    }
+
+    void SetHideNew(int state) { hideNewCheckState = static_cast<Qt::CheckState>(state); }
 
   private:
-    TView     *view     = nullptr;
-    TDelegate *delegate = nullptr;
+    std::map<int, LabelConfigsItem *> labels;
+    Qt::CheckState                  hideNewCheckState = Qt::CheckState::Unchecked;
 };
 
-// class LabelTableLine {
-//   public:
-//     enum Column {
-//         Name = 0,
-//         ShowOnly,
-//         Hide
-//     };
-//
-//     LabelTableLine(const QString &name);
-//     LabelTableLine(int label);
-//
-//     QTableWidgetItem *GetLabel() { return label_num; }
-//     QTableWidgetItem *GetShowOnly() { return showOnlyCheck; }
-//     QTableWidgetItem *GetHide() { return hideCheck; }
-//
-//     void SetLabel(int label) { label_num->setText(QString::number(label, 8)); }
-//     void SetShowOnlyCheck(Qt::CheckState state) { showOnlyCheck->setCheckState(state); }
-//     void SetHideCheck(Qt::CheckState state) { hideCheck->setCheckState(state); }
-//
-//   private:
-//     QTableWidgetItem *label_num     = nullptr;
-//     QTableWidgetItem *showOnlyCheck = nullptr;
-//     QTableWidgetItem *hideCheck     = nullptr;
-// };
-//
-// class LabelFilter : public QTreeView {
-//     Q_OBJECT
-//
-//   public:
-//     enum SpecialLines {
-//         AllLabels = -2,
-//         NewLine   = -1
-//     };
-//
-//     LabelFilter(QWidget *parent = nullptr);
-//     ~LabelFilter();
-//
-//   public slots:
-//     void OnItemChanged(QTableWidgetItem *item);
-//     void OnDoubleClick(QTableWidgetItem *item);
-//     void OnSelectionChange();
-//
-//   private:
-//     std::map<int, LabelTableLine *> labelLines;
-//     int                             newRowNum = 0;
-// };
+class LabelFilterView : public QTreeView {
+  public:
+    explicit LabelFilterView(LabelConfigsModel *model, QWidget *parent = nullptr)
+      : QTreeView{ parent }
+    {
+        setModel(model);
 
-// model
-// delegate if needed
+        hideColumn(LabelConfigsItem::Parameter::FirstOccurrence);
+        hideColumn(LabelConfigsItem::Parameter::LastOccurrence);
+        hideColumn(LabelConfigsItem::Parameter::HitCount);
+        hideColumn(LabelConfigsItem::Parameter::MakeBeep);
+
+        sortByColumn(LabelConfigsItem::Parameter::Name, Qt::SortOrder::AscendingOrder);
+
+        hideAllChBox = new QCheckBox{ "Hide all labels", this->viewport() };
+        showAllChBox = new QCheckBox{ "Show all labels", this->viewport() };
+        hideNew      = new QCheckBox{ "Hide new labels", this->viewport() };
+
+        connect(hideAllChBox, &QCheckBox::stateChanged, model, &LabelConfigsModel::SetAllHide);
+        connect(showAllChBox, &QCheckBox::stateChanged, model, &LabelConfigsModel::SetAllShow);
+        connect(showAllChBox, &QCheckBox::stateChanged, model, &LabelConfigsModel::SetHideNew);
+    }
+
+  public slots:
+    // void OnHideAllClicked(state) { dynamic_cast<LabelModel *>(model())->setallhide(state); }
+
+  protected:
+    void resizeEvent(QResizeEvent *evt) override;
+
+    // todo: add trigger for checkboxes : click ->
+
+  private:
+    QCheckBox *hideAllChBox = nullptr;
+    QCheckBox *showAllChBox = nullptr;
+    QCheckBox *hideNew      = nullptr;
+};
+
+class LabelInfoView : public QTreeView { 
+    public:
+    explicit LabelInfoView(QWidget *parent)
+      : QTreeView{ parent }
+    { }
+};
