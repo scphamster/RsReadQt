@@ -160,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.cpp" />
     <ClCompile Include="arinc.cpp" />
+    <ClCompile Include="arinc_chart.cpp" />
     <ClCompile Include="labelfilter.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Serial.cpp" />
@@ -177,7 +178,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.h" />
-    <QtMoc Include="arinc.hpp" />
+    <ClInclude Include="arinc.hpp" />
+    <QtMoc Include="arinc_chart.hpp" />
     <ClInclude Include="datatrack.hpp" />
     <ClInclude Include="global_configs.hpp" />
     <ClInclude Include="labelfilter.hpp" />

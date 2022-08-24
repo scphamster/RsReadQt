@@ -30,7 +30,6 @@
 #include "arinc.hpp"
 #include <Windows.h>
 
-
 ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
                              deque_s<std::shared_ptr<::dataPacket>> &data,
                              QObject                                *parent)
@@ -82,6 +81,9 @@ Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
     arincChart = std::make_unique<ArincLabelsChart>(parent);
     connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
 
+    labels = new LabelConfigsModel{};
+
+
     CreateRawOutput();
     CreateLabelsInfo();
     CreateFilter();
@@ -104,17 +106,17 @@ Output::CreateLabelsInfo()
 {
     labelsInfo = new LabelsInfo{ tabWgt };
     labelsInfo->setSortingEnabled(true);
-    labelsInfo->sortByColumn(0, Qt::SortOrder::DescendingOrder);
+    labelsInfo->sortByColumn(LabelsInfo::Name, Qt::SortOrder::DescendingOrder);
 
     auto labels = new QTreeWidgetItem{};
-    
+
     labels->setText(0, "Label");
     labels->setText(1, "First occurrence");
     labels->setText(2, "Last occurrence");
     labels->setText(3, "Hit count");
     labels->setText(4, "Make beep");
     labels->setText(5, "Show on diagram");
-    
+
     labelsInfo->setHeaderItem(labels);
     labelsInfo->setAlternatingRowColors(true);
 
@@ -130,11 +132,19 @@ Output::CreateLabelsInfo()
 void
 Output::CreateFilter()
 {
-    auto newmodel = new LabelModel{};
-    
-    auto filter = new LabelFilter<QTreeView, LabelModel, LabelFilterDelegate>{ tabWgt, newmodel};
-    filter->GetView()->sortByColumn(0, Qt::SortOrder::AscendingOrder);
-    tabWgt->addTab(filter->GetView(), "Filter");
+    // test
+    auto newmodel = new LabelConfigsModel{};
+    //
+    // auto filter = new LabelFilter<QTreeView, LabelModel, LabelFilterDelegate>{ tabWgt, newmodel};
+    // filter->GetView()->sortByColumn(0, Qt::SortOrder::AscendingOrder);
+    // tabWgt->addTab(filter->GetView(), "Filter");
+    // endtest
+
+    // test2
+
+    auto filter = new LabelFilterView{ newmodel };
+    tabWgt->addTab(filter, "filter");
+    // endtest2
 }
 
 void

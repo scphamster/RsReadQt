@@ -61,6 +61,9 @@
     <ClCompile Include="labelfilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="arinc_chart.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="serialconfig.h">
@@ -72,7 +75,7 @@
     <QtMoc Include="TextEdit.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="arinc.hpp">
+    <QtMoc Include="arinc_chart.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -98,6 +101,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="labelfilter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="arinc.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
