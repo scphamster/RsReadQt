@@ -81,15 +81,12 @@ Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
     arincChart = std::make_unique<ArincLabelsChart>(parent);
     connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
 
-    labels = new LabelConfigsModel{};
-
+    labels = new ArincLabelModel{};
 
     CreateRawOutput();
     CreateLabelsInfo();
     CreateFilter();
 }
-
-Output::~Output() { }
 
 void
 Output::CreateRawOutput()
@@ -133,7 +130,7 @@ void
 Output::CreateFilter()
 {
     // test
-    auto newmodel = new LabelConfigsModel{};
+    auto newmodel = new ArincLabelModel{};
     //
     // auto filter = new LabelFilter<QTreeView, LabelModel, LabelFilterDelegate>{ tabWgt, newmodel};
     // filter->GetView()->sortByColumn(0, Qt::SortOrder::AscendingOrder);
@@ -231,7 +228,7 @@ Output::SaveSession()
 }
 
 void
-Output::ScrollAndSelectMsg(uint64_t item)
+Output::ScrollAndSelectMsg(size_t item)
 {
     rawMessages->scrollToItem(rawMessages->item(arincChart->GetIdxOfSelectedMessage()));
     rawMessages->setCurrentRow((arincChart->GetIdxOfSelectedMessage()));

@@ -70,6 +70,20 @@ class ArincMsg {
     bool msgIsHealthy = false;
 };
 
+// struct DTMsgStructure {
+//     enum {
+//         Undefined = -1
+//     };
+//
+//     QList<QString> msgParts;
+//     size_t         msgPartsNumber = Undefined;
+//
+//
+//
+//     private:
+//     std::map<QString, DTWordField> anatomy;
+// };
+
 class Arinc {
   public:
     Arinc() = default;
@@ -87,6 +101,12 @@ class Arinc {
     std::map<ArincLabel, std::vector<ArincMsg>> labels;
 
     std::map<QString, DTWordField> DTMsgAnatomy;
+
+    // todo: rework anatomy concept to be more versatile: normalization of raw data shold look like: 
+    // for (auto part : receiverMsgAnatomy.msgParts)
+    //  { NormalizeMsgItem(rawData, part, msg[part]); }
+    // DTMsgStructure receiverMsgAnatomy;
+    //  DecodeRawMsgFromReceiver(rawData) -> ArincMsg {
 
     QString decodeSpecsFileName;
 

@@ -92,7 +92,7 @@ ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
 {
     int label = static_cast<int>(atPoint.y());
 
-    if (not labelsSeries.contains(label))
+    if (not  labelsSeries.contains(label))
         return false;
 
     const auto &dataVector = labelsSeries.at(label).second;
@@ -317,7 +317,7 @@ ArincLabelsChart::Append(const ArincMsg &msg)
     constexpr auto  hscroll_overshoot                   = 10;
     constexpr qreal auto_x_range_change_olddata_percent = 0.3;
 
-    if (not labelsSeries.contains(msg.labelRaw))
+    if (not  labelsSeries.contains(msg.labelRaw))
         AddLabel(msg.channel, msg.labelRaw);
 
     auto msg_time = (-1) * static_cast<qreal>(msg.timeArrivalPC.msecsTo(startOfOperation)) / 1000;

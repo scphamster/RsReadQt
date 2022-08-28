@@ -67,7 +67,7 @@ SerialConfig::RetreiveSettingsFromSystem()
     }
     else {
         auto avlblPorts2 = serialConfigs->GetAvlblComPorts();
-        if (not serialConfigs->PreviouslySelectedPortIsPresent()) {
+        if (not  serialConfigs->PreviouslySelectedPortIsPresent()) {
             serialConfigs->SetPortToUndefined();
         }
 

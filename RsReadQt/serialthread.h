@@ -34,13 +34,6 @@
 #include "Serial.h"   //this header should be last
 
 // DT = DataTrack
-#ifndef DEBUG
-#ifdef assert
-#undef assert
-#endif
-
-#define assert(__expr) __expr
-#endif   // DEBUG
 
 class ReadingThread : public QThread {
     Q_OBJECT
@@ -103,7 +96,7 @@ class Output : public QObject {
            std::shared_ptr<void>                   dataBridgeConfigs,
            QTabWidget                             *tabs,
            QMainWindow                            *parent = nullptr);
-    ~Output();
+    ~Output() final = default;
 
     void CreateRawOutput();
     void CreateLabelsInfo();
@@ -114,7 +107,7 @@ class Output : public QObject {
   public slots:
     void ShowNewData();
     bool SaveSession();
-    void ScrollAndSelectMsg(uint64_t msgN);
+    void ScrollAndSelectMsg(size_t msgN);
 
   private:
     QMainWindow           *myParent = nullptr;
@@ -126,5 +119,5 @@ class Output : public QObject {
     deque_s<std::shared_ptr<::dataPacket>> &rawData;
     QListWidget                            *rawMessages = nullptr;
     LabelsInfo                             *labelsInfo  = nullptr;
-    LabelConfigsModel                             *labels      = nullptr;
+    ArincLabelModel                             *labels      = nullptr;
 };

@@ -11,7 +11,9 @@
 #include <qlayout.h>
 #include <QtWidgets/qhboxlayout>
 
-//#define NOWRITERTHREAD
+// test
+#include "_ArincLabelModel.hpp"
+#include <QTreeView>
 
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
@@ -29,6 +31,22 @@ MainWindow::MainWindow(QWidget *parent)
     connect(actionConfigure_serial, &QAction::triggered, this, &MainWindow::OnSerialConfigureClicked);
     connect(actionStart_receiver, &QAction::triggered, this, &MainWindow::OnStartSerialClicked);
     connect(actionStop_receiver, &QAction::triggered, this, &MainWindow::OnStopSerialClicked);
+
+    //test
+
+    //auto widget = new QWidget{};
+    //widget->resize(QSize{ 500, 300 });
+    //widget->show();
+
+    auto tree_view = new QTreeView{ };
+
+    auto model = new _ArincLabelModel{};
+    tree_view->setModel(model);
+
+    tree_view->setGeometry(QRect{ 200, 200, 500, 500 });    
+    tree_view->show();
+
+    //endtest
 }
 
 MainWindow::~MainWindow()

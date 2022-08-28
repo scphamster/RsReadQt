@@ -1,24 +1,61 @@
 #pragma once
 
 #include <QString>
+#include <QDateTime>
+#include <QList>
+
 #include <QObject>
 #include <QWidget>
-#include <QTableWidget>
-#include <QTreeView>
-#include <QTreeWidget>
-#include <QTreeWidget>
-#include <QStyledItemDelegate>
-#include <QStandardItemModel>
-#include <QStandardItem>
 #include <QLineEdit>
 #include <QCheckBox>
 #include <QPainter>
+
+#include <QTreeView>
+#include <QTreeWidget>
+#include <QTableWidget>
+#include <QStandardItemModel>
+#include <QStyledItemDelegate>
 
 #include <algorithm>
 
 #include "arinc.hpp"
 
-class LabelConfigsItem : protected QStandardItem {
+class ArincMsg;
+
+class ArincMsgItem {
+  public:
+    enum {
+        Undefined = -1
+    };
+
+    enum Parameter {
+        Counter = 0,
+        ArrivalTime,
+        Data
+    };
+
+    explicit ArincMsgItem(int counter, const QDateTime &arrival_time, const ArincMsg &data)
+      : number{ counter }
+      , arrivalTime{ arrival_time }
+      , arincMsg{ data }
+    {
+        params.insert(Parameter::Counter, new QStandardItem{});
+        params.at(Counter)->setData(counter, Qt::ItemDataRole::DisplayRole);
+
+        params.insert(Parameter::ArrivalTime, new QStandardItem{});
+        params.at(ArrivalTime)->setText(arrival_time.toString("hh:mm:ss:zzz"));
+    }
+
+    decltype(auto) GetRow() const noexcept { return params; }
+
+  private:
+    int                    number = Undefined;
+    const QDateTime       &arrivalTime;
+    QList<QStandardItem *> params;
+    const ArincMsg        &arincMsg;
+};
+
+class LabelItem {
   public:
     enum Parameter {
         Name = 0,
@@ -36,13 +73,13 @@ class LabelConfigsItem : protected QStandardItem {
         All = -1
     };
 
-    LabelConfigsItem(int              label,
-                   const QImage    &label_img        = QImage{},
-                   const QDateTime &first_occurrence = QDateTime{},
-                   int              hit_count        = 0,
-                   bool             make_beep        = false,
-                   Qt::CheckState   show             = Qt::CheckState::Checked,
-                   Qt::CheckState   hide             = Qt::CheckState::Unchecked);
+    explicit LabelItem(int              label,
+              const QImage    &label_img        = QImage{},
+              const QDateTime &first_occurrence = QDateTime{},
+              int              hit_count        = 0,
+              bool             make_beep        = false,
+              Qt::CheckState   show             = Qt::CheckState::Checked,
+              Qt::CheckState   hide             = Qt::CheckState::Unchecked);
 
     // setters
     void SetLabel(int label);
@@ -63,9 +100,8 @@ class LabelConfigsItem : protected QStandardItem {
     QList<QStandardItem *> params;
 };
 
-class LabelConfigsModel : public QStandardItemModel {
-    // Q_OBJECT
-
+class ArincLabelModel : public QStandardItemModel{
+     //Q_OBJECT
   public:
     enum Parameter {
         Name = 0,
@@ -75,6 +111,7 @@ class LabelConfigsModel : public QStandardItemModel {
         MakeBeep,
         ShowOnDiagram,
         Hide,
+        ArincMsgs,
         _SIZE
     };
 
@@ -83,11 +120,11 @@ class LabelConfigsModel : public QStandardItemModel {
 
     template<typename... Args>
         requires(sizeof...(Args) > 0)
-    explicit LabelConfigsModel(Args... args)
+    explicit ArincLabelModel(Args... args)
       : QStandardItemModel(std::forward<Args>(args)...)
     { }
 
-    LabelConfigsModel();
+    ArincLabelModel();
 
   public slots:
     void OnDataChange() { }
@@ -104,31 +141,31 @@ class LabelConfigsModel : public QStandardItemModel {
     void SetHideNew(int state) { hideNewCheckState = static_cast<Qt::CheckState>(state); }
 
   private:
-    std::map<int, LabelConfigsItem *> labels;
-    Qt::CheckState                  hideNewCheckState = Qt::CheckState::Unchecked;
+    std::map<int, LabelItem *> labels;
+    Qt::CheckState             hideNewCheckState = Qt::CheckState::Unchecked;
 };
 
 class LabelFilterView : public QTreeView {
   public:
-    explicit LabelFilterView(LabelConfigsModel *model, QWidget *parent = nullptr)
+    explicit LabelFilterView(ArincLabelModel *model, QWidget *parent = nullptr)
       : QTreeView{ parent }
     {
         setModel(model);
 
-        hideColumn(LabelConfigsItem::Parameter::FirstOccurrence);
-        hideColumn(LabelConfigsItem::Parameter::LastOccurrence);
-        hideColumn(LabelConfigsItem::Parameter::HitCount);
-        hideColumn(LabelConfigsItem::Parameter::MakeBeep);
+        hideColumn(LabelItem::Parameter::FirstOccurrence);
+        hideColumn(LabelItem::Parameter::LastOccurrence);
+        // hideColumn(LabelItem::Parameter::HitCount);
+        hideColumn(LabelItem::Parameter::MakeBeep);
 
-        sortByColumn(LabelConfigsItem::Parameter::Name, Qt::SortOrder::AscendingOrder);
+        sortByColumn(LabelItem::Parameter::Name, Qt::SortOrder::AscendingOrder);
 
         hideAllChBox = new QCheckBox{ "Hide all labels", this->viewport() };
         showAllChBox = new QCheckBox{ "Show all labels", this->viewport() };
         hideNew      = new QCheckBox{ "Hide new labels", this->viewport() };
 
-        connect(hideAllChBox, &QCheckBox::stateChanged, model, &LabelConfigsModel::SetAllHide);
-        connect(showAllChBox, &QCheckBox::stateChanged, model, &LabelConfigsModel::SetAllShow);
-        connect(showAllChBox, &QCheckBox::stateChanged, model, &LabelConfigsModel::SetHideNew);
+        connect(hideAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetAllHide);
+        connect(showAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetAllShow);
+        connect(showAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetHideNew);
     }
 
   public slots:
@@ -145,8 +182,8 @@ class LabelFilterView : public QTreeView {
     QCheckBox *hideNew      = nullptr;
 };
 
-class LabelInfoView : public QTreeView { 
-    public:
+class LabelInfoView : public QTreeView {
+  public:
     explicit LabelInfoView(QWidget *parent)
       : QTreeView{ parent }
     { }
