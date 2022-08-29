@@ -45,7 +45,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     tree_view->setGeometry(QRect{ 200, 200, 500, 500 });    
     tree_view->show();
-
+    
+    tree_view->setSortingEnabled(true);
     //endtest
 }
 

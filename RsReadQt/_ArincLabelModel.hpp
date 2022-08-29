@@ -4,6 +4,7 @@
 
 #include <QString>
 #include <QAbstractItemModel>
+#include <algorithm>
 
 #include "arinc.hpp"
 
@@ -181,12 +182,14 @@ class ArincItemData {
 
     ArincItemData()
       : arincData{ std::make_shared<ArincData>() }
+      , treeData{ new ArincTreeData{} }
     {
         SetupTreeDataFromArincData();
     }
 
     explicit ArincItemData(std::shared_ptr<ArincData> data)
       : arincData{ data }
+      , treeData{ new ArincTreeData{} }
     {
         SetupTreeDataFromArincData();
     }
@@ -228,15 +231,21 @@ class ArincItemData {
         arincData->SetVisibilityState(newstate);
         treeData->SetVisibilityState(newstate);
     }
+    void SetArincData(std::shared_ptr<ArincData> newdata)
+    {
+        arincData = newdata;
+        SetupTreeDataFromArincData();
+    }
+
     void AppendMessage(std::shared_ptr<ArincMsg> msg) { arincData->AppendMessage(msg); }
 
     auto GetTreeData(Column column, Qt::ItemDataRole role) { return treeData->data(column, role); }
     auto GetTreeChildrenCount() { return treeData->childCount(); }
     auto GetTreeColumnCount() { return treeData->columnCount(); }
     auto GetTreeFlags() { return treeData->flags(); }
-    auto SetTreeData(Column column, Qt::ItemDataRole role, const QVariant &value)
+    void SetTreeData(Column column, Qt::ItemDataRole role, const QVariant &value)
     {
-        return treeData->setData(column, role, value);
+        treeData->setData(column, role, value);
     }
     auto InsertTreeChild(Row row, ArincTreeData *child)
     {
@@ -247,12 +256,11 @@ class ArincItemData {
 
     auto RemoveTreeChild(ArincTreeData *child) { treeData->removeChild(child); }
 
+    auto GetArincData() { return arincData; }
+
   private:
     void SetupTreeDataFromArincData()
     {
-        if (treeData == nullptr)
-            treeData = new ArincTreeData{};
-
         treeData->SetLabel(arincData->GetLabel<_ArincLabel::TxtT>());
         treeData->SetFirstOccurrence(arincData->GetFirstOccurrence());
         treeData->SetLastOccurrence(arincData->GetLastOccurrence());
@@ -260,18 +268,105 @@ class ArincItemData {
         treeData->SetBeeperState(arincData->GetBeeperState());
         treeData->SetVisibilityState(arincData->GetVisibilityState());
 
-        treeData->setFlags(Qt::ItemFlag::ItemIsEnabled bitor Qt::ItemFlag::ItemIsEditable bitor
-                           Qt::ItemFlag::ItemIsSelectable);
+        using Flag = Qt::ItemFlag;
+        treeData->setFlags(Flag::ItemIsEnabled bitor Flag::ItemIsSelectable bitor Flag::ItemIsUserCheckable);
     }
     std::shared_ptr<ArincData> arincData;
     ArincTreeData             *treeData = nullptr;
 };
 
-class _ArincLabelItem {
+// todo: add sorting
+template<typename ChildT, size_t DimensionsInUse = 1>
+class ChildContainer {
   public:
-    using Row     = size_t;
-    using Column  = ArincItemData::Column;
-    using Counter = ArincData::HitCounterT;
+    ~ChildContainer()
+    {
+        for (auto child : children)
+            delete child;
+    }
+
+    [[nodiscard]] auto GetChild(size_t position)
+    {
+        if (children.size() - 1 < position)
+            return static_cast<ChildT *>(nullptr);
+
+        return children.at(position);
+    }
+
+    // todo: make children be packed with no gaps, contiguously
+    [[nodiscard]] auto InsertChild(size_t position, ChildT *newchild)
+    {
+        if (newchild == nullptr)
+            return false;
+
+        if (dimensionMaxPosition + 1 < position)
+            position = dimensionMaxPosition + 1;
+
+        dimensionMaxPosition++;
+        children.resize(dimensionMaxPosition + 1);
+
+        // push all children one row down after "position"
+        if (children.size() > 1 and (position < children.size() - 1)) {
+            auto insert_item_at     = children.rbegin() + (children.size() - 1 - position);
+            auto new_child_position = children.size() - 1;
+            auto one_child_ahead    = children.rbegin() + 1;
+
+            std::for_each(children.rbegin(), insert_item_at, [this, &new_child_position, &one_child_ahead](auto &child) {
+                child = *one_child_ahead;
+                child->SetRow(new_child_position);
+                new_child_position--;
+                one_child_ahead++;
+            });
+        }
+
+        children.at(position) = newchild;
+        newchild->SetRow(position);
+
+        return true;
+    }
+
+    [[nodiscard]] auto ChildAtPosExists(size_t at_pos) const noexcept { return children.contains(at_pos); }
+
+    [[nodiscard]] auto GetChildrenCount() const noexcept { return children.size(); }
+
+    [[nodiscard]] auto GetDoNotExceedDimensionsSizes(int dimension) const noexcept { return dimensionMaxPosition; }
+
+    // template<std::predicate SortingFunctor>
+    // void Sort(auto column, auto order, SortingFunctor sorter)
+    //{
+    //     std::sort(children.begin(), children.end(), sorter);
+    // }
+
+    template<typename SortingFunctor>
+    void Sort(auto column, auto order, SortingFunctor sorter)
+    {
+        std::sort(children.begin(), children.end(), sorter);
+        for (size_t position{ 0 }; auto child : children) {
+            child->SetRow(position++);
+        }
+    }
+
+  private:
+    std::vector<ChildT *> children;
+    size_t                dimensionMaxPosition = -1;
+};
+
+template<typename ChildT>
+class ChildContainer<ChildT, 2> {
+    [[nodiscard]] auto GetChild(size_t position_d1, size_t position_d2) { return 0; }
+
+  private:
+    std::map<size_t, std::map<size_t, ChildT *>> children;
+    std::vector<size_t>                          dimensionSizes;
+};
+
+template<size_t NumberOfDimensions = 1>
+class ProxyArincLabelItem {
+  public:
+    using Row            = size_t;
+    using Column         = ArincItemData::Column;
+    using Counter        = ArincData::HitCounterT;
+    using ChildContainer = ChildContainer<ProxyArincLabelItem, NumberOfDimensions>;
 
     enum class BehaveLike {
         QTreeItem,
@@ -292,29 +387,23 @@ class _ArincLabelItem {
         _SIZE
     };
 
-    _ArincLabelItem(Row _row, Column _column, std::shared_ptr<ArincData> newdata, _ArincLabelItem *_parent)
-      : row{ _row }
-      , compositeItem{ std::make_shared<ArincItemData>(newdata) }
-      , column{ _column }
-      , parentItem{ _parent }
+    ProxyArincLabelItem(std::shared_ptr<ArincData> data_of_item, ProxyArincLabelItem *parent_of_this_item = nullptr)
+      : universalItem{ std::make_shared<ArincItemData>(data_of_item) }
+      , parentItem{ parent_of_this_item }
     { }
-    _ArincLabelItem(const _ArincLabelItem &)            = default;
-    _ArincLabelItem &operator=(const _ArincLabelItem &) = default;
-    _ArincLabelItem(_ArincLabelItem &&)                 = default;
-    _ArincLabelItem &operator=(_ArincLabelItem &&)      = default;
-    ~_ArincLabelItem()
-    {
-        for (auto child : children) {
-            delete child;
-        }
-    }
+
+    ProxyArincLabelItem(const ProxyArincLabelItem &)            = default;
+    ProxyArincLabelItem &operator=(const ProxyArincLabelItem &) = default;
+    ProxyArincLabelItem(ProxyArincLabelItem &&)                 = default;
+    ProxyArincLabelItem &operator=(ProxyArincLabelItem &&)      = default;
+    ~ProxyArincLabelItem()                                      = default;
 
     [[nodiscard]] auto GetParent() const noexcept { return parentItem; }
 
     template<BehaveLike BehaviourT = BehaveLike::QTreeItem>
     [[nodiscard]] auto GetColumnCount() const noexcept
     {
-        return compositeItem->GetTreeColumnCount();
+        return universalItem->GetTreeColumnCount();
     }
 
     template<>
@@ -324,26 +413,16 @@ class _ArincLabelItem {
         return 0;
     }
 
-    template<BehaveLike BehaviourT = BehaveLike::QTreeItem>
-    [[nodiscard]] auto GetChildrenCount()
-    {
-        return compositeItem->GetTreeChildrenCount();
-    }
+    [[nodiscard]] auto GetChildrenCount() { return children.GetChildrenCount(); }
 
-    template<>
-    [[nodiscard]] auto GetChildrenCount<BehaveLike::ArincItem>()
-    {
-        return children.size();
-    }
+    [[nodiscard]] auto GetRow() const noexcept { return locatedAtRow; }
 
-    [[nodiscard]] auto GetRow() const noexcept { return row; }
-
-    [[nodiscard]] auto GetColumn() const noexcept { return column; }
+    [[nodiscard]] auto GetColumn() const noexcept { return locatedAtColumn; }
 
     template<BehaveLike BehaviourT = BehaveLike::QTreeItem>
     [[nodiscard]] Qt::ItemFlags GetFlags()
     {
-        return compositeItem->GetTreeFlags();
+        return universalItem->GetTreeFlags();
     }
 
     template<BehaveLike BehaviourType = BehaveLike::QTreeItem,
@@ -352,7 +431,7 @@ class _ArincLabelItem {
              typename RoleT           = Qt::ItemDataRole>
     [[nodiscard]] RType GetData(ColumnT column, RoleT role)
     {
-        return compositeItem->GetTreeData(column, static_cast<Qt::ItemDataRole>(role));
+        return universalItem->GetTreeData(column, static_cast<Qt::ItemDataRole>(role));
     }
 
     template<>
@@ -364,61 +443,80 @@ class _ArincLabelItem {
     }
 
     template<BehaveLike BehaviourT = BehaveLike::QTreeItem>
-    [[nodiscard]] bool SetData(Column column, int role, const QVariant &value)
+    void SetData(Column column, int role, const QVariant &value)
     {
-        return compositeItem->SetTreeData(column, role, value);
+        universalItem->SetTreeData(column, static_cast<Qt::ItemDataRole>(role), value);
     }
 
     template<>
-    [[nodiscard]] bool SetData(Column column, int role, const QVariant &value)
+    void SetData<BehaveLike::ArincItem>(Column column, int role, const QVariant &value)
     {
-        return false;
-        // todo: implement
+        // compositeItem->SetArincData()
+    }
+
+    void SetItemsRow(size_t newrow) noexcept
+    {
+        if (newrow > 0)
+            locatedAtRow = newrow;
     }
 
     [[nodiscard]] auto GetParent() noexcept { return parentItem; }
+    [[nodiscard]] auto InsertChild(ProxyArincLabelItem *child, Row row = 0) { return children.InsertChild(row, child); }
+    [[nodiscard]] auto GetChild(Row at_row, Column at_column) { return children.GetChild(at_row); }
 
-    void InsertChild(Row row, _ArincLabelItem *child)
+    void SetRow(auto new_row) noexcept { locatedAtRow = new_row; }
+
+    template<BehaveLike BehaviourT = BehaveLike::QTreeItem>
+    void SortChildren(Column column, Qt::SortOrder order)
     {
-        if (children.size() < (row + 1))
-            children.resize(row + 1, nullptr);
+        children.Sort(column, order, [column, order](const auto &first_child, const auto &second_child) {
+            bool answer;
+            using Col    = ArincTreeData::ColumnRole;
+            auto ardata1 = first_child->universalItem->GetArincData();
+            auto ardata2 = second_child->universalItem->GetArincData();
+            
+            //todo: bad behaviour of comparators
+            switch (column) {
+            case static_cast<Column>(Col::LabelNum):
+                answer = ardata1->GetLabel<_ArincLabel::NumT>() < ardata2->GetLabel<_ArincLabel::NumT>();
+                break;
+            case static_cast<Column>(Col::FirstOccurrence):
+                answer = ardata1->GetFirstOccurrence() < ardata2->GetFirstOccurrence();
+                break;
+            case static_cast<Column>(Col::LastOccurrence):
+                answer = ardata1->GetLastOccurrence() < ardata2->GetLastOccurrence();
+                break;
+            case static_cast<Column>(Col::HitCount):
+                answer = ardata1->GetHitCount() < ardata1->GetHitCount();
 
-        if (children.at(row) != nullptr)
-            delete children.at(row);
+                // case Col::MakeBeep:
+                //     answer = ardata1->GetBeeperState()
+                // case Col::ShowOnDiagram :   answer = ardata1->GetVisibilityState()
+                // case Col::Hide :            answer = ardata1->GetHitCount()
 
-        children.at(row) = child;
-        compositeItem->InsertTreeChild(row, child->compositeItem->GetTreeItem());
-    }
+            default: answer = false;
+            }
 
-    [[nodiscard]] _ArincLabelItem *GetChild(Row at_row, Column at_column)
-    {
-        if (at_column > 0)
-            return nullptr;
-
-        if (at_row > children.size())
-            return nullptr;
-
-        auto child = children.at(at_row);
-        if (child == nullptr)
-            return nullptr;
-
-        return child;
+            return order == Qt::SortOrder::AscendingOrder ? answer : not answer;
+        });
     }
 
   private:
-    std::shared_ptr<ArincItemData> compositeItem;
-    std::vector<_ArincLabelItem *> children;
-    _ArincLabelItem               *parentItem;
-    Row                            row    = -1;
-    Column                         column = -1;
+    std::shared_ptr<ArincItemData> universalItem;
+    // std::vector<_ArincLabelItem *> children;
+    ChildContainer children;
+
+    ProxyArincLabelItem *parentItem;
+    Row                  locatedAtRow    = 0;
+    Column               locatedAtColumn = 0;
 };
 
 class _ArincLabelModel : public QAbstractItemModel {
     Q_OBJECT
   public:
-    using Row       = _ArincLabelItem::Row;
-    using Column    = _ArincLabelItem::Column;
-    using ArincRole = _ArincLabelItem::ArincRole;
+    using Row       = ProxyArincLabelItem<1>::Row;
+    using Column    = ProxyArincLabelItem<1>::Column;
+    using ArincRole = ProxyArincLabelItem<1>::ArincRole;
 
     enum class Parameter {
         Name = 0,
@@ -442,17 +540,24 @@ class _ArincLabelModel : public QAbstractItemModel {
     [[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
     [[nodiscard]] QVariant GetDataForStandardViews(const QModelIndex &index, int role) const;
     // QVariant      GetDataForSpecialViews(const QModelIndex &index, int role) const;
-    [[nodiscard]] bool          setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    [[nodiscard]] bool     setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    [[nodiscard]] QVariant headerData(int at_pos, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+    bool setHeaderData(int at_pos, Qt::Orientation orientation, const QVariant &value, int role = Qt::EditRole) override;
+
     [[nodiscard]] Qt::ItemFlags flags(const QModelIndex &index) const override;
 
-    void Insert(_ArincLabelItem *newitem, int row, const QModelIndex &parent);
+    void Insert(size_t row, ProxyArincLabelItem<1> *newitem);
 
     [[nodiscard]] auto ItemFromIndex(const QModelIndex &idx) const
     {
-        auto item = idx.isValid() ? static_cast<_ArincLabelItem *>(idx.internalPointer()) : rootItem;
+        auto item = idx.isValid() ? static_cast<ProxyArincLabelItem<1> *>(idx.internalPointer()) : rootItem;
         return (item == nullptr) ? rootItem : item;
     }
 
+    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+
   private:
-    _ArincLabelItem *rootItem;
+    ProxyArincLabelItem<1> *rootItem;
+    QTreeWidgetItem         header;
 };

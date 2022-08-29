@@ -119,5 +119,5 @@ class Output : public QObject {
     deque_s<std::shared_ptr<::dataPacket>> &rawData;
     QListWidget                            *rawMessages = nullptr;
     LabelsInfo                             *labelsInfo  = nullptr;
-    ArincLabelModel                             *labels      = nullptr;
+    ArincLabelModel                        *labels      = nullptr;
 };
