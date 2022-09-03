@@ -1,6 +1,7 @@
 #include <QMainWindow>
 
 #include "arinc_chart.hpp"
+#include "arinc.hpp"
 
 void
 LineSeries::SetMarkerVisibility(bool make_visible)
@@ -108,7 +109,7 @@ ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
     });
 
     if (point_and_msg_itr != dataVector.rend()) {
-        idxOfSelectedMsg = (point_and_msg_itr->second.msgNumber);
+        idxOfSelectedMsg = (point_and_msg_itr->second->msgNumber);
 
         const auto &points = series->points();
 
@@ -311,33 +312,33 @@ ArincLabelsChart::_AdjustAxisToScroll(QValueAxis *axis, ScrollBar *scroll, int v
 }
 
 void
-ArincLabelsChart::Append(const ArincMsg &msg)
+ArincLabelsChart::Append(std::shared_ptr<ArincMsg> msg)
 {
     constexpr auto  vscroll_overshoot                   = 30;
     constexpr auto  hscroll_overshoot                   = 10;
     constexpr qreal auto_x_range_change_olddata_percent = 0.3;
 
-    if (not  labelsSeries.contains(msg.labelRaw))
-        AddLabel(msg.channel, msg.labelRaw);
+    if (not  labelsSeries.contains(msg->labelRaw))
+        AddLabel(msg->channel, msg->labelRaw);
 
-    auto msg_time = (-1) * static_cast<qreal>(msg.timeArrivalPC.msecsTo(startOfOperation)) / 1000;
+    auto msg_time = (-1) * static_cast<qreal>(msg->timeArrivalPC.msecsTo(startOfOperation)) / 1000;
 
-    labelsSeries[msg.labelRaw].first->append(QPointF(msg_time, msg.labelRaw));
-    labelsSeries[msg.labelRaw].second.push_back(std::pair<qreal, const ArincMsg &>(msg_time, msg));
+    labelsSeries[msg->labelRaw].first->append(QPointF(msg_time, msg->labelRaw));
+    labelsSeries[msg->labelRaw].second.push_back(std::pair<qreal, std::shared_ptr<ArincMsg>>(msg_time, msg));
 
     hmax = msg_time + hscroll_overshoot;
     hscroll->setMaximum(static_cast<int>(hmax));
 
-    if ((vaxis->max() - vscroll_overshoot) < msg.labelRaw) {
-        vmax = static_cast<int>(msg.labelRaw) + vscroll_overshoot;
+    if ((vaxis->max() - vscroll_overshoot) < msg->labelRaw) {
+        vmax = static_cast<int>(msg->labelRaw) + vscroll_overshoot;
         vscroll->setMaximum(vmax);
     }
 
-    if (manualAxisRange || !labelsSeries[msg.labelRaw].first->MarkerIsVisible()) {
+    if (manualAxisRange || !labelsSeries[msg->labelRaw].first->MarkerIsVisible()) {
         return;
     }
 
-    if ((vaxis->max() - vscroll_overshoot) < msg.labelRaw) {
+    if ((vaxis->max() - vscroll_overshoot) < msg->labelRaw) {
         vaxis->setMax(static_cast<qreal>(vscroll->maximum()));
     }
 

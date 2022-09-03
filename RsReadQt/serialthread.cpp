@@ -28,6 +28,7 @@
 
 #include "serialthread.h"
 #include "arinc.hpp"
+#include "_ArincLabelModel.hpp"
 #include <Windows.h>
 
 ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
@@ -81,7 +82,8 @@ Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
     arincChart = std::make_unique<ArincLabelsChart>(parent);
     connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
 
-    labels = new ArincLabelModel{};
+    labels     = new ArincLabelModel{};
+    arincModel = std::make_shared<_ArincLabelModel>();
 
     CreateRawOutput();
     CreateLabelsInfo();
@@ -124,24 +126,18 @@ Output::CreateLabelsInfo()
             &LabelsInfo::LabelVisibilityChoiceChanged,
             arincChart.get(),
             &ArincLabelsChart::SetLabelVisibility);
+
+    // test
+
+    auto _labelsInfo = new LabelsInfoView{ arincModel, tabWgt };
+    tabWgt->addTab(_labelsInfo, "labelinfo");
+    // endtest
 }
 
 void
 Output::CreateFilter()
 {
-    // test
-    auto newmodel = new ArincLabelModel{};
-    //
-    // auto filter = new LabelFilter<QTreeView, LabelModel, LabelFilterDelegate>{ tabWgt, newmodel};
-    // filter->GetView()->sortByColumn(0, Qt::SortOrder::AscendingOrder);
-    // tabWgt->addTab(filter->GetView(), "Filter");
-    // endtest
-
-    // test2
-
-    auto filter = new LabelFilterView{ newmodel };
-    tabWgt->addTab(filter, "filter");
-    // endtest2
+    tabWgt->addTab(new LabelFilterView(arincModel), "filter");
 }
 
 void
@@ -152,15 +148,15 @@ Output::NormalizeRawData(const auto &data, QString &appendHere)
     const auto &decoded = arinc->messages.back();
 
     appendHere.append(QString{ "Channel %1, Label %2, SDI %3, Data %4, SSM %5, Parity %6, Time %7" }
-                        .arg(decoded.channel)
-                        .arg(decoded.labelRaw)
-                        .arg(decoded.SDI)
-                        .arg(decoded.valueRaw)
-                        .arg(decoded.SSM)
-                        .arg(decoded.parity)
-                        .arg(decoded.DTtimeRaw));
+                        .arg(decoded->channel)
+                        .arg(decoded->labelRaw)
+                        .arg(decoded->SDI)
+                        .arg(decoded->valueRaw)
+                        .arg(decoded->SSM)
+                        .arg(decoded->parity)
+                        .arg(decoded->DTtimeRaw));
 
-    arinc->lastMsgReadedNum = decoded.msgNumber;
+    arinc->lastMsgReadedNum = decoded->msgNumber;
 }
 
 void
@@ -201,12 +197,14 @@ Output::ShowNewData(void)
 
     ShowDiagram();
 
-    labelsInfo->Update(arinc->LastMsg(),
-                       arinc->labels.at(arinc->LastMsg().label).size(),
-                       arincChart->GetLabelMarker(arinc->LastMsg().labelRaw));
+    arincModel->InsertNewMessage(arinc->messages.back());
 
-    if (labelsInfo->ShouldBeepOnArival(arinc->LastMsg().labelRaw))
-        Beep((arinc->LastMsg().labelRaw + 100) * 4, 100);
+    labelsInfo->Update(arinc->LastMsg(),
+                       arinc->labels.at(arinc->LastMsg()->label).size(),
+                       arincChart->GetLabelMarker(arinc->LastMsg()->labelRaw));
+
+    if (labelsInfo->ShouldBeepOnArival(arinc->LastMsg()->labelRaw))
+        Beep((arinc->LastMsg()->labelRaw + 100) * 4, 100);
 }
 
 bool
@@ -250,32 +248,32 @@ LabelsInfo::OnLabelInfoChanged(QTreeWidgetItem *item, int column)
 }
 
 void
-LabelsInfo::Update(const ArincMsg &msg, int counter, QImage &&img)
+LabelsInfo::Update(auto msg, int counter, QImage &&img)
 {
-    if (not labels.contains(msg.labelRaw)) {
+    if (not labels.contains(msg->labelRaw)) {
         auto label = new QTreeWidgetItem{};
 
-        label->setText(LabelsInfo::Column::Name, QString::number(msg.labelRaw, 8));
+        label->setText(LabelsInfo::Column::Name, QString::number(msg->labelRaw, 8));
         label->setData(
           LabelsInfo::Column::Name,
           Qt::ItemDataRole::DecorationRole,
           img.scaled(20, 20, Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-        label->setText(LabelsInfo::Column::FirstOccurrence, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
-        label->setText(LabelsInfo::Column::LastOccurrence, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
+        label->setText(LabelsInfo::Column::FirstOccurrence, msg->timeArrivalPC.toString(" hh:mm:ss:zzz "));
+        label->setText(LabelsInfo::Column::LastOccurrence, msg->timeArrivalPC.toString(" hh:mm:ss:zzz "));
         label->setData(LabelsInfo::Column::HitCount, Qt::ItemDataRole::EditRole, 1);
         label->setCheckState(LabelsInfo::Column::MakeBeep, Qt::CheckState::Unchecked);
         label->setCheckState(LabelsInfo::Column::ShowOnDiagram, Qt::Checked);
 
-        labels[msg.labelRaw] = label;
+        labels[msg->labelRaw] = label;
 
         addTopLevelItem(label);
     }
     else {
         skipDataChangeEvent = true;
 
-        auto label = labels.at(msg.labelRaw);
-        label->setText(2, msg.timeArrivalPC.toString(" hh:mm:ss:zzz "));
-        label->setData(3, Qt::ItemDataRole::EditRole, counter);
+        auto label = labels.at(msg->labelRaw);
+        label->setText(LabelsInfo::Column::LastOccurrence, msg->timeArrivalPC.toString(" hh:mm:ss:zzz "));
+        label->setData(LabelsInfo::Column::HitCount, Qt::ItemDataRole::EditRole, counter);
 
         skipDataChangeEvent = false;
     }

@@ -31,8 +31,10 @@
 #include "arinc_chart.hpp"
 #include "datatrack.hpp"
 #include "labelfilter.hpp"
+//#include "_ArincLabelModel.hpp"
 #include "Serial.h"   //this header should be last
 
+class _ArincLabelModel;
 // DT = DataTrack
 
 class ReadingThread : public QThread {
@@ -73,7 +75,7 @@ class LabelsInfo : public QTreeWidget {
       : QTreeWidget(std::forward<Args>(args)...)
     { }
 
-    void Update(const ArincMsg &msg, int counter, QImage &&);
+    void Update(auto msg, int counter, QImage &&);
     bool ShouldBeepOnArival(int label);
 
   public slots:
@@ -120,4 +122,9 @@ class Output : public QObject {
     QListWidget                            *rawMessages = nullptr;
     LabelsInfo                             *labelsInfo  = nullptr;
     ArincLabelModel                        *labels      = nullptr;
+
+    // test
+    std::shared_ptr<_ArincLabelModel>      arincModel;
+
+    // endtest
 };

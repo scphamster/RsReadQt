@@ -8,7 +8,6 @@
 
 #include "arinc.hpp"
 
-
 Arinc::Arinc(const QString &decode_file_name)
   : decodeSpecsFileName{ decode_file_name }
 {
@@ -191,13 +190,13 @@ Arinc::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, 
 void
 Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 {
-    ArincMsg msg;
+    auto msg = std::make_shared<ArincMsg>();
 
     if (decodeSpecsFileName == QString{})
         return;
 
-    msg.timeArrivalPC = rawData->msg_arrival_time;
-    msg.msgNumber     = rawData->msg_counter;
+    msg->timeArrivalPC = rawData->msg_arrival_time;
+    msg->msgNumber     = rawData->msg_counter;
 
     for (auto &msgChunk : DTMsgAnatomy) {
         if (msgChunk.second.activeBits.first / 8 >= rawData->bytes_in_buffer ||
@@ -206,15 +205,17 @@ Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
         }
     }
 
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Channel"], msg.channel);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Label"], msg.labelRaw);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["SDI"], msg.SDI);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Data"], msg.valueRaw);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["SSM"], msg.SSM);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Parity"], msg.parity);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Time"], msg.DTtimeRaw);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Channel"], msg->channel);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Label"], msg->labelRaw);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["SDI"], msg->SDI);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Data"], msg->valueRaw);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["SSM"], msg->SSM);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Parity"], msg->parity);
+    NormalizeMsgItem(rawData, DTMsgAnatomy["Time"], msg->DTtimeRaw);
 
-    msg.label.InitByCode(msg.labelRaw);
+    msg->label.InitByCode(msg->labelRaw);
+    msg->_label.Set(msg->labelRaw);
+
     messages.push_back(msg);
-    labels[msg.label].push_back(msg);
+    labels[msg->label].push_back(msg);
 }

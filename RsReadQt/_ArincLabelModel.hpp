@@ -3,21 +3,19 @@
 //#include <gsl/pointers>
 
 #include <QString>
+#include <QTreeWidgetItem>
 #include <QAbstractItemModel>
+#include <QDateTime>
+
 #include <algorithm>
+#include <type_traits>
 
-#include "arinc.hpp"
-
-class _ArincLabel;
-
-template<typename T>
-concept ArincLabelCompatible =
-  std::same_as<T, _ArincLabel::TxtT> or std::same_as<T, _ArincLabel::NumT> or std::same_as<T, _ArincLabel>;
+class ArincMsg;
 
 class _ArincLabel {
   public:
-    using NumT = int;
-    using TxtT = QString;
+    using NumType = int;
+    using TxtType = QString;
 
     enum {
         Undefined       = -1,
@@ -26,23 +24,25 @@ class _ArincLabel {
 
     _ArincLabel() = default;
 
-    explicit _ArincLabel(NumT labelNumber, int number_base = LabelNumberBase)
+    explicit _ArincLabel(NumType labelNumber, int number_base = LabelNumberBase)
       : asNumber{ labelNumber }
       , asText{ QString::number(labelNumber, number_base) }
     { }
 
-    explicit _ArincLabel(const TxtT &label, int number_base = LabelNumberBase)
+    explicit _ArincLabel(const TxtType &label, int number_base = LabelNumberBase)
       : asNumber{ label.toInt(nullptr, number_base) }
       , asText{ label }
     { }
 
-    void Set(NumT numb, int number_base = LabelNumberBase)
+    bool operator==(const _ArincLabel &rhLabel) { return (asNumber == rhLabel.asNumber and asText == rhLabel.asText); }
+
+    void Set(NumType numb, int number_base = LabelNumberBase)
     {
         asNumber = numb;
-        asText   = TxtT::number(numb, number_base);
+        asText   = TxtType::number(numb, number_base);
     }
 
-    void Set(const TxtT &lbl, int number_base = LabelNumberBase)
+    void Set(const TxtType &lbl, int number_base = LabelNumberBase)
     {
         asText   = lbl;
         asNumber = lbl.toInt(nullptr, number_base);
@@ -54,13 +54,17 @@ class _ArincLabel {
         asText   = lbl.GetString();
     }
 
-    [[nodiscard]] NumT GetNumber() const noexcept { return asNumber; }
-    [[nodiscard]] TxtT GetString() const noexcept { return asText; }
+    [[nodiscard]] NumType GetNumber() const noexcept { return asNumber; }
+    [[nodiscard]] TxtType GetString() const noexcept { return asText; }
 
   private:
-    NumT asNumber = Undefined;
-    TxtT asText   = TxtT{ "Undefined" };
+    NumType asNumber = Undefined;
+    TxtType asText   = TxtType{ "Undefined" };
 };
+
+template<typename T>
+concept ArincLabelCompatible =
+  std::same_as<T, _ArincLabel::TxtType> or std::same_as<T, _ArincLabel::NumType> or std::same_as<T, _ArincLabel>;
 
 class ArincData {
   public:
@@ -94,6 +98,7 @@ class ArincData {
     void SetFirstOccurrence(const QDateTime &when) { firstOccurrence = when; }
     void SetLastOccurrence(const QDateTime &when) { lastOccurrence = when; }
     void SetHitCount(HitCounterT quantity) noexcept { hitCount = quantity; }
+    void IncrementHitCount(HitCounterT increment_value = 1) noexcept { hitCount += increment_value; }
     void SetBeeperState(Qt::CheckState newstate) noexcept { isBeeping = newstate; }
     void SetVisibilityState(Qt::CheckState newstate) noexcept { isVisible = newstate; }
     void AppendMessage(std::shared_ptr<ArincMsg> msg) { messages.push_back(msg); }
@@ -105,13 +110,13 @@ class ArincData {
     }
 
     template<>
-    [[nodiscard]] _ArincLabel::TxtT GetLabel<_ArincLabel::TxtT>() const noexcept
+    [[nodiscard]] _ArincLabel::TxtType GetLabel<_ArincLabel::TxtType>() const noexcept
     {
         return label.GetString();
     }
 
     template<>
-    [[nodiscard]] _ArincLabel::NumT GetLabel<_ArincLabel::NumT>() const noexcept
+    [[nodiscard]] _ArincLabel::NumType GetLabel<_ArincLabel::NumType>() const noexcept
     {
         return label.GetNumber();
     }
@@ -146,6 +151,10 @@ class ArincTreeData : public QTreeWidgetItem {
         Hide
     };
 
+    using Flag = Qt::ItemFlag;
+    static const std::underlying_type_t<Qt::ItemFlag> standardFlags =
+      Flag::ItemIsEnabled bitor Flag::ItemIsSelectable bitor Flag::ItemIsUserCheckable bitor Flag::ItemIsEditable;
+
     ArincTreeData()
     {
         setText(static_cast<int>(ColumnRole::LabelNum), QString{ "Undefined" });
@@ -167,6 +176,12 @@ class ArincTreeData : public QTreeWidgetItem {
         setText(static_cast<int>(ColumnRole::LastOccurrence), when.toString("hh:mm:ss:zzz"));
     }
     void SetHitCount(auto quantity) { setText(static_cast<int>(ColumnRole::HitCount), QString::number(quantity)); }
+    void IncrementHitCount(int increment_value = 1)
+    {
+        auto counter_value =
+          data(static_cast<int>(ColumnRole::HitCount), Qt::ItemDataRole::DisplayRole).toInt() + increment_value;
+        setData(static_cast<int>(ColumnRole::HitCount), Qt::ItemDataRole::DisplayRole, counter_value);
+    }
     void SetBeeperState(Qt::CheckState newstate) { setCheckState(static_cast<int>(ColumnRole::MakeBeep), newstate); }
     void SetVisibilityState(Qt::CheckState newstate)
     {
@@ -177,8 +192,8 @@ class ArincTreeData : public QTreeWidgetItem {
 
 class ArincItemData {
   public:
-    using Column = size_t;
-    using Row    = size_t;
+    using Column = int;
+    using Row    = int;
 
     ArincItemData()
       : arincData{ std::make_shared<ArincData>() }
@@ -204,7 +219,7 @@ class ArincItemData {
     void SetLabel(LblT lbl)
     {
         arincData->SetLabel(lbl);
-        treeData->SetLabel(arincData->GetLabel<_ArincLabel::TxtT>());
+        treeData->SetLabel(arincData->GetLabel<_ArincLabel::TxtType>());
     }
     void SetFirstOccurrence(const QDateTime &when)
     {
@@ -237,7 +252,11 @@ class ArincItemData {
         SetupTreeDataFromArincData();
     }
 
-    void AppendMessage(std::shared_ptr<ArincMsg> msg) { arincData->AppendMessage(msg); }
+    void AppendMessage(std::shared_ptr<ArincMsg> msg)
+    {
+        arincData->AppendMessage(msg);
+        treeData->IncrementHitCount();
+    }
 
     auto GetTreeData(Column column, Qt::ItemDataRole role) { return treeData->data(column, role); }
     auto GetTreeChildrenCount() { return treeData->childCount(); }
@@ -257,11 +276,12 @@ class ArincItemData {
     auto RemoveTreeChild(ArincTreeData *child) { treeData->removeChild(child); }
 
     auto GetArincData() { return arincData; }
+    auto GetLabel() { return arincData->GetLabel(); }
 
   private:
     void SetupTreeDataFromArincData()
     {
-        treeData->SetLabel(arincData->GetLabel<_ArincLabel::TxtT>());
+        treeData->SetLabel(arincData->GetLabel<_ArincLabel::TxtType>());
         treeData->SetFirstOccurrence(arincData->GetFirstOccurrence());
         treeData->SetLastOccurrence(arincData->GetLastOccurrence());
         treeData->SetHitCount(arincData->GetHitCount());
@@ -269,8 +289,9 @@ class ArincItemData {
         treeData->SetVisibilityState(arincData->GetVisibilityState());
 
         using Flag = Qt::ItemFlag;
-        treeData->setFlags(Flag::ItemIsEnabled bitor Flag::ItemIsSelectable bitor Flag::ItemIsUserCheckable);
+        treeData->setFlags(static_cast<Qt::ItemFlag>(ArincTreeData::standardFlags));
     }
+
     std::shared_ptr<ArincData> arincData;
     ArincTreeData             *treeData = nullptr;
 };
@@ -291,6 +312,17 @@ class ChildContainer {
             return static_cast<ChildT *>(nullptr);
 
         return children.at(position);
+    }
+
+    template<typename T, typename FinderFunctor>
+    [[nodiscard]] auto GetChildWithParam(const T &param, FinderFunctor finder)
+    {
+        auto child = std::find_if(children.begin(), children.end(), finder);
+
+        if (child == children.end())
+            return static_cast<ChildT *>(nullptr);
+        else
+            return *child;
     }
 
     // todo: make children be packed with no gaps, contiguously
@@ -338,12 +370,33 @@ class ChildContainer {
     // }
 
     template<typename SortingFunctor>
-    void Sort(auto column, auto order, SortingFunctor sorter)
+    decltype(auto) Sort(auto column, auto order, SortingFunctor sorter)
     {
-        std::sort(children.begin(), children.end(), sorter);
-        for (size_t position{ 0 }; auto child : children) {
-            child->SetRow(position++);
+        std::pair<QList<std::pair<int, ChildT *>>, QList<std::pair<int, ChildT *>>> changedModelIndexesFromTo{};
+
+        for (const auto child : children) {
+            changedModelIndexesFromTo.first << std::pair<int, ChildT *>{ child->GetRow(), child };
         }
+        std::stable_sort(children.begin(), children.end(), sorter);
+
+        // auto temp             = *(children.end() - 1);
+        //*(children.end() - 1) = *(children.begin());
+        //*(children.begin())   = temp;
+
+        for (size_t position{ 0 }; auto child : children) {
+            child->SetRow(position);
+            changedModelIndexesFromTo.second << std::pair<int, ChildT *>{ position, child };
+
+            position++;
+        }
+
+        return changedModelIndexesFromTo;
+    }
+
+    template<typename T, typename EqComparatorFunctor>
+    auto Contains(const T &wantedParam, EqComparatorFunctor comparator) const
+    {
+        return std::any_of(children.begin(), children.end(), comparator);
     }
 
   private:
@@ -467,18 +520,27 @@ class ProxyArincLabelItem {
     void SetRow(auto new_row) noexcept { locatedAtRow = new_row; }
 
     template<BehaveLike BehaviourT = BehaveLike::QTreeItem>
-    void SortChildren(Column column, Qt::SortOrder order)
+    decltype(auto) SortChildren(Column column, Qt::SortOrder order)
     {
-        children.Sort(column, order, [column, order](const auto &first_child, const auto &second_child) {
+        return children.Sort(column, order, [column, order](const auto &first_child, const auto &second_child) {
             bool answer;
-            using Col    = ArincTreeData::ColumnRole;
-            auto ardata1 = first_child->universalItem->GetArincData();
-            auto ardata2 = second_child->universalItem->GetArincData();
-            
-            //todo: bad behaviour of comparators
+
+            decltype(first_child->universalItem->GetArincData()) ardata1;
+            decltype(first_child->universalItem->GetArincData()) ardata2;
+
+            if (order == Qt::SortOrder::AscendingOrder) {
+                ardata1 = first_child->universalItem->GetArincData();
+                ardata2 = second_child->universalItem->GetArincData();
+            }
+            else {
+                ardata2 = first_child->universalItem->GetArincData();
+                ardata1 = second_child->universalItem->GetArincData();
+            }
+
+            using Col = ArincTreeData::ColumnRole;
             switch (column) {
             case static_cast<Column>(Col::LabelNum):
-                answer = ardata1->GetLabel<_ArincLabel::NumT>() < ardata2->GetLabel<_ArincLabel::NumT>();
+                answer = ardata1->GetLabel<_ArincLabel::NumType>() < ardata2->GetLabel<_ArincLabel::NumType>();
                 break;
             case static_cast<Column>(Col::FirstOccurrence):
                 answer = ardata1->GetFirstOccurrence() < ardata2->GetFirstOccurrence();
@@ -488,7 +550,7 @@ class ProxyArincLabelItem {
                 break;
             case static_cast<Column>(Col::HitCount):
                 answer = ardata1->GetHitCount() < ardata1->GetHitCount();
-
+                break;
                 // case Col::MakeBeep:
                 //     answer = ardata1->GetBeeperState()
                 // case Col::ShowOnDiagram :   answer = ardata1->GetVisibilityState()
@@ -497,8 +559,33 @@ class ProxyArincLabelItem {
             default: answer = false;
             }
 
-            return order == Qt::SortOrder::AscendingOrder ? answer : not answer;
+            return answer;
         });
+    }
+
+    auto Contains(const _ArincLabel &label) const
+    {
+        return children.Contains(label, [&label](const auto &child) {
+            if (child->universalItem->GetLabel() == label)
+                return true;
+            else
+                return false;
+        });
+    }
+
+    void AppendMessage(std::shared_ptr<ArincMsg> msg, const _ArincLabel &forLabel)
+    {
+        auto child = children.GetChildWithParam(forLabel, [label = forLabel](const auto &child) {
+            if (child->universalItem->GetLabel() == label)
+                return true;
+            else
+                return false;
+        });
+
+        if (child == nullptr)
+            return;
+
+        child->universalItem->AppendMessage(msg);
     }
 
   private:
@@ -547,7 +634,12 @@ class _ArincLabelModel : public QAbstractItemModel {
 
     [[nodiscard]] Qt::ItemFlags flags(const QModelIndex &index) const override;
 
+    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+
     void Insert(size_t row, ProxyArincLabelItem<1> *newitem);
+    void Insert(size_t row, const _ArincLabel &label);
+    void Insert(size_t row, const QString &label);
+    void Insert(size_t row, int label);
 
     [[nodiscard]] auto ItemFromIndex(const QModelIndex &idx) const
     {
@@ -555,7 +647,7 @@ class _ArincLabelModel : public QAbstractItemModel {
         return (item == nullptr) ? rootItem : item;
     }
 
-    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+    void InsertNewMessage(std::shared_ptr<ArincMsg> msg);
 
   private:
     ProxyArincLabelItem<1> *rootItem;

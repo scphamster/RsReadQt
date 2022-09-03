@@ -52,7 +52,7 @@ class ArincLabelsChart : public QWidget {
 
     bool IsSomeLabelSelected() const noexcept { return idxOfSelectedMsg != ItemSelection::NOTSELECTED; }
     void AddLabel(int channel, int labelIdx);
-    void Append(const ArincMsg &msg);
+    void Append(std::shared_ptr<ArincMsg>);
     auto GetLabelMarker(int label) { return labelsSeries.at(label).first->lightMarker(); }
 
     enum ItemSelection {
@@ -92,7 +92,7 @@ class ArincLabelsChart : public QWidget {
     //    std::vector<qreal, const ArincMsg &> messages;
     //};
 
-    std::map<int, std::pair<LineSeries *, std::vector<std::pair<qreal, const ArincMsg &>>>> labelsSeries;
+    std::map<int, std::pair<LineSeries *, std::vector<std::pair<qreal, std::shared_ptr<ArincMsg>>>>> labelsSeries;
     //std::map<int, std::unique_ptr<LabelData>>                                               labels;
 
 

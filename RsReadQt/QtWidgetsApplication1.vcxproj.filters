@@ -112,10 +112,10 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="labelfilter.hpp">
+    <ClInclude Include="arinc.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="arinc.hpp">
+    <ClInclude Include="labelfilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

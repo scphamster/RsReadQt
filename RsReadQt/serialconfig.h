@@ -4,13 +4,6 @@
 #include "ui_serialconfig.h"
 #include "Serial.h"
 
-#ifndef DEBUG
-#ifdef assert
-#undef assert
-#endif
-
-#define assert(__expr) __expr
-#endif   // DEBUG
 
 
 template<typename ConfigsT>

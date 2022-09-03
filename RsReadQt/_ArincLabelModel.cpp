@@ -1,4 +1,5 @@
 #include "_ArincLabelModel.hpp"
+#include "arinc.hpp"
 
 _ArincLabelModel::_ArincLabelModel()
 {
@@ -16,13 +17,13 @@ _ArincLabelModel::_ArincLabelModel()
     setHeaderData(static_cast<int>(Column::Hide), horizontal, "Hide");
 
     // test
-    Insert(0, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 100 }), rootItem });
-    Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 150 }), rootItem });
-    Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 80 }), rootItem });
-    Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 70 }), rootItem });
-    Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 40 }), rootItem });
-    Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 30 }), rootItem });
-    Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 51 }), rootItem });
+    // Insert(0, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 100 }) });
+    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 150 }) });
+    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 80 }) });
+    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 70 }) });
+    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 40 }) });
+    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 30 }) });
+    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 51 }) });
     // endtest
 }
 
@@ -132,25 +133,59 @@ _ArincLabelModel::flags(const QModelIndex &index) const
 void
 _ArincLabelModel::Insert(size_t row, ProxyArincLabelItem<1> *newitem)
 {
+    if (newitem == nullptr)
+        return;
+
     auto parent_item = (newitem->GetParent() == nullptr) ? rootItem : newitem->GetParent();
 
     if (parent_item->InsertChild(newitem, row)) {
+        emit layoutAboutToBeChanged({}, QAbstractItemModel::LayoutChangeHint::NoLayoutChangeHint);
+
         auto index_which_was_changed = createIndex(newitem->GetRow(), newitem->GetColumn(), newitem);
+
+        emit layoutChanged({}, QAbstractItemModel::NoLayoutChangeHint);
         emit dataChanged(index_which_was_changed, index_which_was_changed, QList<int>{ Qt::ItemDataRole::DisplayRole });
     }
 }
 
-//todo: bad behaviour, remake
+void
+_ArincLabelModel::InsertNewMessage(std::shared_ptr<ArincMsg> msg)
+{
+    if (not rootItem->Contains(msg->_label)) {
+        Insert(0, new ProxyArincLabelItem<1>{ std::make_shared<ArincData>(msg->_label), rootItem });
+    }
+
+    rootItem->AppendMessage(msg, msg->_label);
+
+    emit dataChanged(createIndex(0, 0, nullptr),
+                     createIndex(rowCount() - 1, columnCount() - 1, nullptr),
+                     QList<int>{ Qt::ItemDataRole::DisplayRole });
+}
+
+// todo: bad behaviour, remake
 void
 _ArincLabelModel::sort(int column, Qt::SortOrder order)
 {
-    rootItem->SortChildren(column, order);
+    emit layoutAboutToBeChanged({}, QAbstractItemModel::VerticalSortHint);
+    auto changed = rootItem->SortChildren(column, order);
 
-    auto first_index = createIndex(0, 0, rootItem->GetChild(0, 0));
-    auto last_index =
-      createIndex(rootItem->GetChildrenCount() - 1, 0, rootItem->GetChild(rootItem->GetChildrenCount() - 1, 0));
+    QList<QModelIndex> fromList;
+    for (auto &row_item_pair : changed.first) {
+        for (auto col = 0; col < columnCount(); col++) {
+            fromList << createIndex(row_item_pair.first, col, row_item_pair.second);
+        }
+    }
 
-    emit dataChanged(first_index, last_index, QList<int>{ Qt::ItemDataRole::DisplayRole });
+    QList<QModelIndex> toList;
+    for (auto &row_item_pair : changed.second) {
+        for (auto col = 0; col < columnCount(); col++) {
+            toList << createIndex(row_item_pair.first, col, row_item_pair.second);
+        }
+    }
+
+    changePersistentIndexList(fromList, toList);   // no impact observed so far
+
+    emit layoutChanged({}, QAbstractItemModel::VerticalSortHint);
 }
 
 bool

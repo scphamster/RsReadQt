@@ -18,9 +18,8 @@
 
 #include <algorithm>
 
+#include "_ArincLabelModel.hpp"
 #include "arinc.hpp"
-
-class ArincMsg;
 
 class ArincMsgItem {
   public:
@@ -74,12 +73,12 @@ class LabelItem {
     };
 
     explicit LabelItem(int              label,
-              const QImage    &label_img        = QImage{},
-              const QDateTime &first_occurrence = QDateTime{},
-              int              hit_count        = 0,
-              bool             make_beep        = false,
-              Qt::CheckState   show             = Qt::CheckState::Checked,
-              Qt::CheckState   hide             = Qt::CheckState::Unchecked);
+                       const QImage    &label_img        = QImage{},
+                       const QDateTime &first_occurrence = QDateTime{},
+                       int              hit_count        = 0,
+                       bool             make_beep        = false,
+                       Qt::CheckState   show             = Qt::CheckState::Checked,
+                       Qt::CheckState   hide             = Qt::CheckState::Unchecked);
 
     // setters
     void SetLabel(int label);
@@ -100,8 +99,8 @@ class LabelItem {
     QList<QStandardItem *> params;
 };
 
-class ArincLabelModel : public QStandardItemModel{
-     //Q_OBJECT
+class ArincLabelModel : public QStandardItemModel {
+    // Q_OBJECT
   public:
     enum Parameter {
         Name = 0,
@@ -146,45 +145,60 @@ class ArincLabelModel : public QStandardItemModel{
 };
 
 class LabelFilterView : public QTreeView {
+    // Q_OBJECT
+
   public:
-    explicit LabelFilterView(ArincLabelModel *model, QWidget *parent = nullptr)
+    explicit LabelFilterView(std::shared_ptr<_ArincLabelModel> model, QWidget *parent = nullptr)
       : QTreeView{ parent }
     {
-        setModel(model);
+        _model = model;
+        setModel(model.get());
 
         hideColumn(LabelItem::Parameter::FirstOccurrence);
         hideColumn(LabelItem::Parameter::LastOccurrence);
         // hideColumn(LabelItem::Parameter::HitCount);
         hideColumn(LabelItem::Parameter::MakeBeep);
 
-        sortByColumn(LabelItem::Parameter::Name, Qt::SortOrder::AscendingOrder);
+        setSortingEnabled(true);
+        setAlternatingRowColors(true);
+        // sortByColumn(LabelItem::Parameter::Name, Qt::SortOrder::AscendingOrder);
 
-        hideAllChBox = new QCheckBox{ "Hide all labels", this->viewport() };
-        showAllChBox = new QCheckBox{ "Show all labels", this->viewport() };
-        hideNew      = new QCheckBox{ "Hide new labels", this->viewport() };
+        // hideAllChBox = new QCheckBox{ "Hide all labels", this->viewport() };
+        // showAllChBox = new QCheckBox{ "Show all labels", this->viewport() };
+        // hideNew      = new QCheckBox{ "Hide new labels", this->viewport() };
 
-        connect(hideAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetAllHide);
-        connect(showAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetAllShow);
-        connect(showAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetHideNew);
+        // connect(hideAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetAllHide);
+        // connect(showAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetAllShow);
+        // connect(showAllChBox, &QCheckBox::stateChanged, model, &ArincLabelModel::SetHideNew);
     }
 
   public slots:
     // void OnHideAllClicked(state) { dynamic_cast<LabelModel *>(model())->setallhide(state); }
 
   protected:
-    void resizeEvent(QResizeEvent *evt) override;
+    // void resizeEvent(QResizeEvent *evt) override;
 
     // todo: add trigger for checkboxes : click ->
 
   private:
-    QCheckBox *hideAllChBox = nullptr;
-    QCheckBox *showAllChBox = nullptr;
-    QCheckBox *hideNew      = nullptr;
+    QCheckBox                        *hideAllChBox = nullptr;
+    QCheckBox                        *showAllChBox = nullptr;
+    QCheckBox                        *hideNew      = nullptr;
+    std::shared_ptr<_ArincLabelModel> _model;
 };
 
-class LabelInfoView : public QTreeView {
+class LabelsInfoView : public QTreeView {
   public:
-    explicit LabelInfoView(QWidget *parent)
+    using Column = ArincItemData::Column;
+
+    explicit LabelsInfoView(auto model, QWidget *parent = nullptr)
       : QTreeView{ parent }
-    { }
+    {
+        setModel(model.get());
+
+        setSortingEnabled(true);
+        setAlternatingRowColors(true);
+
+        hideColumn(static_cast<Column>(ArincTreeData::ColumnRole::Hide));
+    }
 };

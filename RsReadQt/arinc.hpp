@@ -22,6 +22,8 @@
 #include "labelfilter.hpp"
 #include "Serial.h"
 
+class _ArincLabel;
+
 class ArincLabel : protected std::pair<int, QString> {
   public:
     using codeName = std::pair<int, QString>;
@@ -54,18 +56,19 @@ class ArincLabel : protected std::pair<int, QString> {
 
 class ArincMsg {
   public:
-    QDateTime  timeArrivalPC;
-    int        channel = 0;
-    ArincLabel label;
-    uint8_t    labelRaw  = 0;
-    uint64_t   valueRaw  = 0;
-    double     value     = 0;
-    uint8_t    SSM       = 0;
-    uint8_t    parity    = 0;
-    uint64_t   DTtimeRaw = 0;
-    QTime      DTtime;
-    uint8_t    SDI       = 0;
-    uint64_t   msgNumber = 0;
+    QDateTime   timeArrivalPC;
+    int         channel = 0;
+    ArincLabel  label;
+    _ArincLabel _label;
+    uint8_t     labelRaw  = 0;
+    uint64_t    valueRaw  = 0;
+    double      value     = 0;
+    uint8_t     SSM       = 0;
+    uint8_t     parity    = 0;
+    uint64_t    DTtimeRaw = 0;
+    QTime       DTtime;
+    uint8_t     SDI       = 0;
+    uint64_t    msgNumber = 0;
 
     bool msgIsHealthy = false;
 };
@@ -92,17 +95,17 @@ class Arinc {
     void           GetDecodeConfigsFromFile();
     void           NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
     void           NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &elemStructure, auto &container);
-    void           MsgPushBack(ArincMsg &msg) { messages.push_back(msg); }
+    void           MsgPushBack(auto msg) { messages.push_back(msg); }
     decltype(auto) FirstMsg() { return messages.front(); }
     decltype(auto) LastMsg() { return messages.back(); }
 
     // TODO: make setters getters
-    std::deque<ArincMsg>                        messages;
-    std::map<ArincLabel, std::vector<ArincMsg>> labels;
+    std::deque<std::shared_ptr<ArincMsg>>                        messages;
+    std::map<ArincLabel, std::vector<std::shared_ptr<ArincMsg>>> labels;
 
     std::map<QString, DTWordField> DTMsgAnatomy;
 
-    // todo: rework anatomy concept to be more versatile: normalization of raw data shold look like: 
+    // todo: rework anatomy concept to be more versatile: normalization of raw data shold look like:
     // for (auto part : receiverMsgAnatomy.msgParts)
     //  { NormalizeMsgItem(rawData, part, msg[part]); }
     // DTMsgStructure receiverMsgAnatomy;

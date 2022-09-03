@@ -1,4 +1,5 @@
 #include "labelfilter.hpp"
+#include "_ArincLabelModel.hpp"
 
 LabelItem::LabelItem(int              label = SpecialLabel::New,
                      const QImage    &label_img,
@@ -79,15 +80,15 @@ ArincLabelModel::ArincLabelModel()
 }
 
 
-
-void
-LabelFilterView::resizeEvent(QResizeEvent *evt)
-{
-    constexpr auto chboxW = 120, chboxH = 20;
-    constexpr auto chbox1LPos = 15, chbox2LPos = chbox1LPos + chboxW, chbox3LPos = chbox2LPos + chboxW;
-
-    this->setFrameRect(QRect{ 0, 0, evt->size().width(), evt->size().height() - 30 });
-    hideAllChBox->setGeometry(QRect{ chbox1LPos, evt->size().height() - 30, chboxW, chboxH });
-    showAllChBox->setGeometry(QRect{ chbox2LPos, evt->size().height() - 30, chboxW, chboxH });
-    hideNew->setGeometry(QRect{ chbox3LPos, evt->size().height() - 30, chboxW, chboxH });
-}
+//
+//void
+//LabelFilterView::resizeEvent(QResizeEvent *evt)
+//{
+//    constexpr auto chboxW = 120, chboxH = 20;
+//    constexpr auto chbox1LPos = 15, chbox2LPos = chbox1LPos + chboxW, chbox3LPos = chbox2LPos + chboxW;
+//
+//    this->setFrameRect(QRect{ 0, 0, evt->size().width(), evt->size().height() - 30 });
+//    hideAllChBox->setGeometry(QRect{ chbox1LPos, evt->size().height() - 30, chboxW, chboxH });
+//    showAllChBox->setGeometry(QRect{ chbox2LPos, evt->size().height() - 30, chboxW, chboxH });
+//    hideNew->setGeometry(QRect{ chbox3LPos, evt->size().height() - 30, chboxW, chboxH });
+//}
