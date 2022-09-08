@@ -31,6 +31,10 @@
 #include "_ArincLabelModel.hpp"
 #include <Windows.h>
 
+// test
+#include "_ArincChartView.h"
+// endtest
+
 ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
                              deque_s<std::shared_ptr<::dataPacket>> &data,
                              QObject                                *parent)
@@ -84,6 +88,14 @@ Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
 
     labels     = new ArincLabelModel{};
     arincModel = std::make_shared<_ArincLabelModel>();
+
+    // test
+    auto chview = new _ArincChartView{ std::move(std::unique_ptr<LabelDrawer<QImage>>{} =
+                                                   std::move(std::make_unique<QChartLabelDrawer<QImage>>())) };
+    chview->resize(700, 700);
+    chview->setModel(arincModel.get());
+    chview->show();
+    // endtest
 
     CreateRawOutput();
     CreateLabelsInfo();

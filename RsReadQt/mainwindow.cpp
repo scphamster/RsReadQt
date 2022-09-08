@@ -11,9 +11,6 @@
 #include <qlayout.h>
 #include <QtWidgets/qhboxlayout>
 
-// test
-#include "_ArincLabelModel.hpp"
-#include <QTreeView>
 
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
@@ -33,15 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(actionStop_receiver, &QAction::triggered, this, &MainWindow::OnStopSerialClicked);
     
     //test
-    //auto tree_view = new QTreeView{ };
-
-    //auto model = new _ArincLabelModel{};
-    //tree_view->setModel(model);
-
-    //tree_view->setGeometry(QRect{ 200, 200, 500, 500 });    
-    //tree_view->show();
-    //
-    //tree_view->setSortingEnabled(true);
+    
     //endtest
 }
 

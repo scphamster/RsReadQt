@@ -126,14 +126,12 @@ ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
         });
 
         if (iterator != points.end()) {
-            if (selectedMsgSeriesAffinity != nullptr) {
-                selectedMsgSeriesAffinity->deselectAllPoints();
+            if (seriesOwningSelectedMsg != nullptr) {
+                seriesOwningSelectedMsg->deselectAllPoints();
             }
 
             series->setPointSelected(idx, true);
-
-            selectedMsgSeriesAffinity = series;
-
+            seriesOwningSelectedMsg = series;
             emit MsgOnChartBeenSelected(idxOfSelectedMsg);
 
             return true;
@@ -365,9 +363,9 @@ ArincLabelsChart::eventFilter(QObject *obj, QEvent *evt)
     if (evt->type() == QEvent::Type::MouseButtonPress) {
         idxOfSelectedMsg = ArincLabelsChart::ItemSelection::NOTSELECTED;
 
-        if (selectedMsgSeriesAffinity != nullptr) {
-            selectedMsgSeriesAffinity->deselectAllPoints();
-            selectedMsgSeriesAffinity = nullptr;
+        if (seriesOwningSelectedMsg != nullptr) {
+            seriesOwningSelectedMsg->deselectAllPoints();
+            seriesOwningSelectedMsg = nullptr;
         }
 
         return true;

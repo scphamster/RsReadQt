@@ -169,6 +169,7 @@
     <ClCompile Include="serialconfig.cpp" />
     <ClCompile Include="serialthread.cpp" />
     <ClCompile Include="TextEdit.cpp" />
+    <ClCompile Include="_ArincChartView.cpp" />
     <ClCompile Include="_ArincLabelModel.cpp" />
     <QtRcc Include="mainwindow.qrc" />
     <QtUic Include="mainwindow.ui" />
@@ -182,6 +183,8 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.h" />
     <ClInclude Include="arinc.hpp" />
+    <ClInclude Include="arinc_model_configs.hpp" />
+    <QtMoc Include="_ArincChartView.h" />
     <QtMoc Include="_ArincLabelModel.hpp" />
     <QtMoc Include="arinc_chart.hpp" />
     <QtMoc Include="ArincChartView.h" />

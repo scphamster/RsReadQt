@@ -43,21 +43,23 @@ class ScrollBar : public QScrollBar {
 class ArincLabelsChart : public QWidget {
     Q_OBJECT
   public:
-    ArincLabelsChart() = default;
-    explicit ArincLabelsChart(QWidget *parent);
-    void OnLabelOnChartSelected(const QPointF &);
-
-    bool GetDataFromLabelOnChart(const QPointF &);
-    int  GetIdxOfSelectedMessage() { return idxOfSelectedMsg; }
-
-    bool IsSomeLabelSelected() const noexcept { return idxOfSelectedMsg != ItemSelection::NOTSELECTED; }
-    void AddLabel(int channel, int labelIdx);
-    void Append(std::shared_ptr<ArincMsg>);
-    auto GetLabelMarker(int label) { return labelsSeries.at(label).first->lightMarker(); }
-
     enum ItemSelection {
         NOTSELECTED = INT64_MAX
     };
+
+    ArincLabelsChart() = default;
+    explicit ArincLabelsChart(QWidget *parent);
+    
+    void OnLabelOnChartSelected(const QPointF &);
+    
+    void Append(std::shared_ptr<ArincMsg>);
+    void AddLabel(int channel, int labelIdx);
+    
+    bool GetDataFromLabelOnChart(const QPointF &);
+    int  GetIdxOfSelectedMessage() { return idxOfSelectedMsg; }
+    auto GetLabelMarker(int label) { return labelsSeries.at(label).first->lightMarker(); }
+
+    bool IsSomeLabelSelected() const noexcept { return idxOfSelectedMsg != ItemSelection::NOTSELECTED; }
 
   protected:
     void resizeEvent(QResizeEvent *evt) override;
@@ -76,7 +78,7 @@ class ArincLabelsChart : public QWidget {
 
     QDateTime   startOfOperation;
     uint64_t    idxOfSelectedMsg          = NOTSELECTED;
-    LineSeries *selectedMsgSeriesAffinity = nullptr;
+    LineSeries *seriesOwningSelectedMsg = nullptr;
 
     QCheckBox  *autoRangeChBox = nullptr;
     ScrollBar  *hscroll        = nullptr;
@@ -86,15 +88,7 @@ class ArincLabelsChart : public QWidget {
     QValueAxis *vaxis          = nullptr;
     QValueAxis *haxis          = nullptr;
 
-    //struct LabelData {
-    //    LineSeries                          *series  = nullptr;
-    //    LabelConfigsItem                    *configs = nullptr;
-    //    std::vector<qreal, const ArincMsg &> messages;
-    //};
-
     std::map<int, std::pair<LineSeries *, std::vector<std::pair<qreal, std::shared_ptr<ArincMsg>>>>> labelsSeries;
-    //std::map<int, std::unique_ptr<LabelData>>                                               labels;
-
 
     bool  manualAxisRange = false;
     qreal haxisZoom       = 1.0;

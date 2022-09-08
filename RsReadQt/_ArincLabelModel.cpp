@@ -15,16 +15,8 @@ _ArincLabelModel::_ArincLabelModel()
     setHeaderData(static_cast<int>(Column::MakeBeep), horizontal, "MakeBeep");
     setHeaderData(static_cast<int>(Column::ShowOnDiagram), horizontal, "ShowOnDiagram");
     setHeaderData(static_cast<int>(Column::Hide), horizontal, "Hide");
-
-    // test
-    // Insert(0, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 100 }) });
-    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 150 }) });
-    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 80 }) });
-    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 70 }) });
-    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 40 }) });
-    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 30 }) });
-    // Insert(1, new ProxyArincLabelItem{ std::make_shared<ArincData>(_ArincLabel{ 51 }) });
-    // endtest
+        
+    startOfOperation = QDateTime::currentDateTime();
 }
 
 QModelIndex
@@ -122,6 +114,23 @@ _ArincLabelModel::setData(const QModelIndex &index, const QVariant &value, int r
     return true;
 }
 
+bool
+_ArincLabelModel::setHeaderData(int             at_pos,
+                                Qt::Orientation orientation,
+                                const QVariant &value,
+                                int             role /*= Qt::EditRole*/)
+{
+    header.setData(at_pos, role, value);
+    emit headerDataChanged(orientation, at_pos, at_pos);
+    return true;
+}
+
+QVariant
+_ArincLabelModel::headerData(int at_pos, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
+{
+    return header.data(at_pos, role);
+}
+
 Qt::ItemFlags
 _ArincLabelModel::flags(const QModelIndex &index) const
 {
@@ -148,20 +157,6 @@ _ArincLabelModel::Insert(size_t row, ProxyArincLabelItem<1> *newitem)
     }
 }
 
-void
-_ArincLabelModel::InsertNewMessage(std::shared_ptr<ArincMsg> msg)
-{
-    if (not rootItem->Contains(msg->_label)) {
-        Insert(0, new ProxyArincLabelItem<1>{ std::make_shared<ArincData>(msg->_label), rootItem });
-    }
-
-    rootItem->AppendMessage(msg, msg->_label);
-
-    emit dataChanged(createIndex(0, 0, nullptr),
-                     createIndex(rowCount() - 1, columnCount() - 1, nullptr),
-                     QList<int>{ Qt::ItemDataRole::DisplayRole });
-}
-
 // todo: bad behaviour, remake
 void
 _ArincLabelModel::sort(int column, Qt::SortOrder order)
@@ -186,21 +181,30 @@ _ArincLabelModel::sort(int column, Qt::SortOrder order)
     changePersistentIndexList(fromList, toList);   // no impact observed so far
 
     emit layoutChanged({}, QAbstractItemModel::VerticalSortHint);
+
+    sortOrder      = order;
+    sortedByColumn = column;
 }
 
-bool
-_ArincLabelModel::setHeaderData(int             at_pos,
-                                Qt::Orientation orientation,
-                                const QVariant &value,
-                                int             role /*= Qt::EditRole*/)
+QImage
+_ArincLabelModel::GetLabelMarker(LabelNumT label) const noexcept(std::is_nothrow_constructible_v<QImage>)
 {
-    header.setData(at_pos, role, value);
-    emit headerDataChanged(orientation, at_pos, at_pos);
-    return true;
+    return rootItem->GetLabelMarker(label);
 }
 
-QVariant
-_ArincLabelModel::headerData(int at_pos, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
+void
+_ArincLabelModel::InsertNewMessage(std::shared_ptr<ArincMsg> msg)
 {
-    return header.data(at_pos, role);
+    if (not rootItem->Contains(msg->_label)) {
+        Insert(0, new ProxyArincLabelItem<1>{ std::make_shared<ArincData>(msg->_label), rootItem });
+    }
+
+    auto row = rootItem->AppendMessage(msg, msg->_label);
+
+    auto changed_index = createIndex(static_cast<int>(row), static_cast<int>(Parameter::ArincMsgs), nullptr);
+    emit dataChanged(changed_index, changed_index, QList<int>{ Qt::ItemDataRole::DisplayRole });
+    emit ArincMsgInserted(msg);
+
+    if (sortedByColumn != Undefined)
+        sort(sortedByColumn, static_cast<Qt::SortOrder>(sortOrder));
 }

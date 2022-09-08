@@ -70,6 +70,9 @@
     <ClCompile Include="_ArincLabelModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="_ArincChartView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="serialconfig.h">
@@ -88,6 +91,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="_ArincLabelModel.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="_ArincChartView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -116,6 +122,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="labelfilter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="arinc_model_configs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

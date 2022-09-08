@@ -20,6 +20,7 @@
 
 #include "_ArincLabelModel.hpp"
 #include "arinc.hpp"
+#include "arinc_model_configs.hpp"
 
 class ArincMsgItem {
   public:
@@ -189,8 +190,6 @@ class LabelFilterView : public QTreeView {
 
 class LabelsInfoView : public QTreeView {
   public:
-    using Column = ArincItemData::Column;
-
     explicit LabelsInfoView(auto model, QWidget *parent = nullptr)
       : QTreeView{ parent }
     {
@@ -198,7 +197,7 @@ class LabelsInfoView : public QTreeView {
 
         setSortingEnabled(true);
         setAlternatingRowColors(true);
-
+        
         hideColumn(static_cast<Column>(ArincTreeData::ColumnRole::Hide));
     }
 };

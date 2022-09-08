@@ -11,7 +11,7 @@ class ArincChartView : public QAbstractItemView {
     ArincChartView(ArincLabelModel *model, QWidget *parent = nullptr);
     
     
-    // drawing
+    // chart
 
 
 
