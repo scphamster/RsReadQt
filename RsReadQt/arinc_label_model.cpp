@@ -1,9 +1,30 @@
-#include "_ArincLabelModel.hpp"
+#include <memory>
+#include <algorithm>
+
+#include <QDateTime>
+#include <QTreeWidget>
+
+#include "arinc_model_configs.hpp"
+#include "arinc_label_model.hpp"
+#include "arinc_label_item.hpp"
+#include "child_container.hpp"
+#include "proxy_arinc_label_item.hpp"
 #include "arinc.hpp"
 
-_ArincLabelModel::_ArincLabelModel()
+class ArincLabelModel2::Impl {
+  public:
+    ProxyArincLabelItem<1> *rootItem;
+
+    QDateTime                             startOfOperation;
+    QTreeWidgetItem                       header;
+    Column                                sortedByColumn = Undefined;
+    std::underlying_type_t<Qt::SortOrder> sortOrder      = Qt::SortOrder::AscendingOrder;
+};
+
+ArincLabelModel2::ArincLabelModel2()
+  : impl{ std::make_unique<Impl>() }
 {
-    rootItem = new ProxyArincLabelItem{ std::make_shared<ArincData>() };
+    impl->rootItem = new ProxyArincLabelItem{ std::make_shared<ArincData>() };
 
     using Column    = ArincTreeData::ColumnRole;
     auto horizontal = Qt::Horizontal;
@@ -15,26 +36,25 @@ _ArincLabelModel::_ArincLabelModel()
     setHeaderData(static_cast<int>(Column::MakeBeep), horizontal, "MakeBeep");
     setHeaderData(static_cast<int>(Column::ShowOnDiagram), horizontal, "ShowOnDiagram");
     setHeaderData(static_cast<int>(Column::Hide), horizontal, "Hide");
-        
-    startOfOperation = QDateTime::currentDateTime();
+
+    impl->startOfOperation = QDateTime::currentDateTime();
 }
 
+ArincLabelModel2::~ArincLabelModel2() = default;
+
 QModelIndex
-_ArincLabelModel::index(int row, int column, const QModelIndex &parent /*= QModelIndex()*/) const
+ArincLabelModel2::index(int row, int column, const QModelIndex &parent /*= QModelIndex()*/) const
 {
     if (not hasIndex(row, column, parent))
         return QModelIndex{};
 
-    // if (column >= static_cast<int>(_ArincLabelItem::ArincRole::_SIZE))
-    // return QModelIndex{};
-
     auto parent_item = ItemFromIndex(parent);
 
-    return createIndex(row, column, parent_item->GetChild(row, column));
+    return createIndex(row, column, static_cast<void *>(parent_item->GetChild(row, column)));
 }
 
 QModelIndex
-_ArincLabelModel::parent(const QModelIndex &child) const
+ArincLabelModel2::parent(const QModelIndex &child) const
 {
     if (not child.isValid())
         return QModelIndex{};
@@ -44,43 +64,43 @@ _ArincLabelModel::parent(const QModelIndex &child) const
         return QModelIndex{};
 
     auto parent_item = child_item->GetParent();
-    if (parent_item == rootItem || parent_item == nullptr)
+    if (parent_item == impl->rootItem || parent_item == nullptr)
         return QModelIndex{};
 
     return createIndex(parent_item->GetRow(), parent_item->GetColumn(), parent_item);
 }
 
 int
-_ArincLabelModel::rowCount(const QModelIndex &parent /*= QModelIndex{}*/) const
+ArincLabelModel2::rowCount(const QModelIndex &parent /*= QModelIndex{}*/) const
 {
     ProxyArincLabelItem<1> *parent_item;
 
     if (parent.isValid())
         parent_item = (static_cast<ProxyArincLabelItem<1> *>(parent.internalPointer()) == nullptr)
-                        ? rootItem
+                        ? impl->rootItem
                         : static_cast<ProxyArincLabelItem<1> *>(parent.internalPointer());
     else
-        parent_item = rootItem;
+        parent_item = impl->rootItem;
 
     return parent_item->GetChildrenCount();
 }
 
 int
-_ArincLabelModel::columnCount(const QModelIndex &parent /*= QModelIndex{}*/) const
+ArincLabelModel2::columnCount(const QModelIndex &parent /*= QModelIndex{}*/) const
 {
     ProxyArincLabelItem<1> *parent_item;
 
     if (parent.isValid())
         parent_item = (static_cast<ProxyArincLabelItem<1> *>(parent.internalPointer()) == nullptr)
-                        ? rootItem
+                        ?impl->rootItem
                         : static_cast<ProxyArincLabelItem<1> *>(parent.internalPointer());
     else
-        parent_item = rootItem;
+        parent_item =impl->rootItem;
     return parent_item->GetColumnCount();
 }
 
 QVariant
-_ArincLabelModel::data(const QModelIndex &index, int role) const
+ArincLabelModel2::data(const QModelIndex &index, int role) const
 {
     return GetDataForStandardViews(index, role);
 
@@ -90,10 +110,10 @@ _ArincLabelModel::data(const QModelIndex &index, int role) const
 }
 
 QVariant
-_ArincLabelModel::GetDataForStandardViews(const QModelIndex &index, int role) const
+ArincLabelModel2::GetDataForStandardViews(const QModelIndex &index, int role) const
 {
     // for QTreeView only column is changing, row is always 0, item is indicated by internal pointer in "index"
-    auto item = index.isValid() ? static_cast<ProxyArincLabelItem<1> *>(index.internalPointer()) : rootItem;
+    auto item = index.isValid() ? static_cast<ProxyArincLabelItem<1> *>(index.internalPointer()) :impl->rootItem;
     if (item == nullptr)
         return 0;
 
@@ -101,7 +121,7 @@ _ArincLabelModel::GetDataForStandardViews(const QModelIndex &index, int role) co
 }
 
 bool
-_ArincLabelModel::setData(const QModelIndex &index, const QVariant &value, int role)
+ArincLabelModel2::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     // todo: make path for my view
     // this is the path for QTreeView
@@ -115,24 +135,24 @@ _ArincLabelModel::setData(const QModelIndex &index, const QVariant &value, int r
 }
 
 bool
-_ArincLabelModel::setHeaderData(int             at_pos,
+ArincLabelModel2::setHeaderData(int             at_pos,
                                 Qt::Orientation orientation,
                                 const QVariant &value,
                                 int             role /*= Qt::EditRole*/)
 {
-    header.setData(at_pos, role, value);
+    impl->header.setData(at_pos, role, value);
     emit headerDataChanged(orientation, at_pos, at_pos);
     return true;
 }
 
 QVariant
-_ArincLabelModel::headerData(int at_pos, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
+ArincLabelModel2::headerData(int at_pos, Qt::Orientation orientation, int role /*= Qt::DisplayRole*/) const
 {
-    return header.data(at_pos, role);
+    return impl->header.data(at_pos, role);
 }
 
 Qt::ItemFlags
-_ArincLabelModel::flags(const QModelIndex &index) const
+ArincLabelModel2::flags(const QModelIndex &index) const
 {
     auto item = ItemFromIndex(index);
 
@@ -140,12 +160,12 @@ _ArincLabelModel::flags(const QModelIndex &index) const
 }
 
 void
-_ArincLabelModel::Insert(size_t row, ProxyArincLabelItem<1> *newitem)
+ArincLabelModel2::Insert(size_t row, ProxyArincLabelItem<1> *newitem)
 {
     if (newitem == nullptr)
         return;
 
-    auto parent_item = (newitem->GetParent() == nullptr) ? rootItem : newitem->GetParent();
+    auto parent_item = (newitem->GetParent() == nullptr) ?impl->rootItem : newitem->GetParent();
 
     if (parent_item->InsertChild(newitem, row)) {
         emit layoutAboutToBeChanged({}, QAbstractItemModel::LayoutChangeHint::NoLayoutChangeHint);
@@ -159,10 +179,10 @@ _ArincLabelModel::Insert(size_t row, ProxyArincLabelItem<1> *newitem)
 
 // todo: bad behaviour, remake
 void
-_ArincLabelModel::sort(int column, Qt::SortOrder order)
+ArincLabelModel2::sort(int column, Qt::SortOrder order)
 {
     emit layoutAboutToBeChanged({}, QAbstractItemModel::VerticalSortHint);
-    auto changed = rootItem->SortChildren(column, order);
+    auto changed =impl->rootItem->SortChildren(column, order);
 
     QList<QModelIndex> fromList;
     for (auto &row_item_pair : changed.first) {
@@ -182,29 +202,46 @@ _ArincLabelModel::sort(int column, Qt::SortOrder order)
 
     emit layoutChanged({}, QAbstractItemModel::VerticalSortHint);
 
-    sortOrder      = order;
-    sortedByColumn = column;
+    impl->sortOrder = order;
+    impl->sortedByColumn = column;
 }
 
 QImage
-_ArincLabelModel::GetLabelMarker(LabelNumT label) const noexcept(std::is_nothrow_constructible_v<QImage>)
+ArincLabelModel2::GetLabelMarker(LabelNumT label) const noexcept(std::is_nothrow_constructible_v<QImage>)
 {
-    return rootItem->GetLabelMarker(label);
+    return impl->rootItem->GetLabelMarker(label);
+}
+
+[[nodiscard]] ProxyArincLabelItem<1> *
+ArincLabelModel2::ItemFromIndex(const QModelIndex &idx) const
+{
+    auto item = idx.isValid() ? static_cast<ProxyArincLabelItem<1> *>(idx.internalPointer()) :impl->rootItem;
+    return (item == nullptr) ?impl->rootItem : item;
 }
 
 void
-_ArincLabelModel::InsertNewMessage(std::shared_ptr<ArincMsg> msg)
+ArincLabelModel2::InsertNewMessage(std::shared_ptr<ArincMsg> msg)
 {
-    if (not rootItem->Contains(msg->_label)) {
-        Insert(0, new ProxyArincLabelItem<1>{ std::make_shared<ArincData>(msg->_label), rootItem });
+    if (not impl->rootItem->Contains(msg->GetLabel<_ArincLabel>())) {
+        Insert(0, new ProxyArincLabelItem<1>{ std::make_shared<ArincData>(msg->channel, msg->_label),impl->rootItem });
     }
 
-    auto row = rootItem->AppendMessage(msg, msg->_label);
+    auto row =impl->rootItem->AppendMessage(msg, msg->_label);
 
     auto changed_index = createIndex(static_cast<int>(row), static_cast<int>(Parameter::ArincMsgs), nullptr);
     emit dataChanged(changed_index, changed_index, QList<int>{ Qt::ItemDataRole::DisplayRole });
     emit ArincMsgInserted(msg);
 
-    if (sortedByColumn != Undefined)
-        sort(sortedByColumn, static_cast<Qt::SortOrder>(sortOrder));
+    if (impl->sortedByColumn != Undefined)
+        sort(impl->sortedByColumn, static_cast<Qt::SortOrder>(impl->sortOrder));
 }
+
+const QDateTime &
+ArincLabelModel2::GetStartTime() const noexcept(std::is_nothrow_constructible_v<QDateTime>)
+{
+    return impl->startOfOperation;
+}
+
+void
+ArincLabelModel2::SetArincMsgSelection(LabelNumT label, std::shared_ptr<ArincMsg> msg)
+{ }

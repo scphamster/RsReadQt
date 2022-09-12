@@ -1,28 +1,15 @@
-#pragma once
+﻿#pragma once
 #include <utility>
 #include <memory>
 #include <map>
-#include <deque>
-
-#include <QObject>
-#include <QWidget>
-#include <QBoxLayout>
-#include <QCheckBox>
-#include <QScrollBar>
-#include <QString>
-#include <QDateTime>
-#include <QTime>
-
-#include <QChart>
-#include <QChartView>
-#include <QValueAxis>
-#include <QLineSeries>
 
 #include "datatrack.hpp"
 #include "labelfilter.hpp"
-#include "Serial.h"
+
+#include "arinc_model_configs.hpp"
 
 class _ArincLabel;
+class dataPacket;
 
 class ArincLabel : protected std::pair<int, QString> {
   public:
@@ -56,20 +43,60 @@ class ArincLabel : protected std::pair<int, QString> {
 
 class ArincMsg {
   public:
-    QDateTime   timeArrivalPC;
-    int         channel = 0;
-    ArincLabel  label;
-    _ArincLabel _label;
+    void SetSelection(bool if_selected = true) noexcept { isSelected = if_selected; }
+    void SetChannel(ArincQModel::ChannelNumT ch) noexcept { channel = ch; }
+    void SetLabel(const _ArincLabel &new_label) noexcept(std::is_nothrow_assignable_v<_ArincLabel, _ArincLabel>)
+    {
+        _label = new_label;
+    }
+    void SetValue(ArincQModel::ValueT new_value) noexcept { valueRaw = new_value; }
+    void SetSSM(ArincQModel::ssmT new_ssm) noexcept { SSM = new_ssm; }
+    void SetParity(ArincQModel::ParityT new_parity) noexcept { parity = new_parity; }
+    void SetDTRawTime(ArincQModel::DTRawTime new_time) noexcept { DTtimeRaw = new_time; }
+    void SetSDI(ArincQModel::sdiT new_sdi) noexcept { SDI = new_sdi; }
+    void SetMsgNumber(ArincQModel::MsgNumT new_msg_num) noexcept { msgNumber = new_msg_num; }
+
+    ArincQModel::ChannelNumT GetChannel() const noexcept { return channel; }
+    _ArincLabel              GetLabel() const noexcept(std::is_nothrow_constructible_v<_ArincLabel>) { return _label; }
+    ArincQModel::ValueT      GetValue() const noexcept { return valueRaw; }
+    ArincQModel::ssmT        GetSSM() const noexcept { return SSM; }
+    ArincQModel::ParityT     GetParity() const noexcept { return parity; }
+    ArincQModel::DTRawTime   GetDTRawTime() const noexcept { return DTtimeRaw; }
+    ArincQModel::sdiT        GetSDI() const noexcept { return SDI; }
+    ArincQModel::MsgNumT     GetMsgNumber() const noexcept { return msgNumber; }
+
+    QDateTime GetTimeArival() const { return timeArrivalPC; }
+    template<typename RetType = _ArincLabel>
+    RetType GetLabel() const noexcept
+    {
+        return _label;
+    }
+    template<>
+    ArincQModel::LabelNumT GetLabel() const noexcept
+    {
+        return labelRaw;
+    }
+    template<>
+    ArincQModel::LabelTxtT GetLabel() const noexcept
+    {
+        return ArincQModel::LabelTxtT::number(labelRaw, 8);
+    }
+
     uint8_t     labelRaw  = 0;
-    uint64_t    valueRaw  = 0;
-    double      value     = 0;
     uint8_t     SSM       = 0;
     uint8_t     parity    = 0;
-    uint64_t    DTtimeRaw = 0;
-    QTime       DTtime;
     uint8_t     SDI       = 0;
+    uint64_t    valueRaw  = 0;
     uint64_t    msgNumber = 0;
+    uint64_t    DTtimeRaw = 0;
+    int         channel   = 0;
+    double      value     = 0;
+    QDateTime   timeArrivalPC;
+    QTime       DTtime;
+    ArincLabel  label;
+    _ArincLabel _label;
 
+    bool isSelected   = false;
     bool msgIsHealthy = false;
 };
 
@@ -87,36 +114,25 @@ class ArincMsg {
 //     std::map<QString, DTWordField> anatomy;
 // };
 
-class Arinc {
+class ArincDriver {
   public:
-    Arinc() = default;
-    explicit Arinc(const QString &decode_file_name);
+    ArincDriver();
+    ~ArincDriver();
+    explicit ArincDriver(const QString &decode_file_name);
 
+    void SetDecodeConfigsFileName(const QString &filename) noexcept(std::is_nothrow_assignable_v<QString, QString &>);
+    QString const &GetDecodeConfigsFileName() const noexcept;
     void           GetDecodeConfigsFromFile();
     void           NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
     void           NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &elemStructure, auto &container);
-    void           MsgPushBack(auto msg) { messages.push_back(msg); }
-    decltype(auto) FirstMsg() { return messages.front(); }
-    decltype(auto) LastMsg() { return messages.back(); }
-
-    // TODO: make setters getters
-    std::deque<std::shared_ptr<ArincMsg>>                        messages;
-    std::map<ArincLabel, std::vector<std::shared_ptr<ArincMsg>>> labels;
-
-    std::map<QString, DTWordField> DTMsgAnatomy;
-
-    // todo: rework anatomy concept to be more versatile: normalization of raw data shold look like:
-    // for (auto part : receiverMsgAnatomy.msgParts)
-    //  { NormalizeMsgItem(rawData, part, msg[part]); }
-    // DTMsgStructure receiverMsgAnatomy;
-    //  DecodeRawMsgFromReceiver(rawData) -> ArincMsg {
-
-    QString decodeSpecsFileName;
-
-    bool     newConfigsFile      = false;
-    bool     anatomyIsConfigured = false;
-    uint64_t lastMsgReadedNum    = 0;
+    void           MsgPushBack(auto msg);
+    std::shared_ptr<ArincMsg> FirstMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>);
+    std::shared_ptr<ArincMsg> LastMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>);
+    ArincQModel::MsgNumT      GetLastReadedMsgNumber() const noexcept;
+    void                      SetLastReadedMsgNumber(ArincQModel::MsgNumT count) noexcept;
 
   protected:
   private:
+    struct ArincDriverImpl;
+    std::unique_ptr<ArincDriverImpl> impl;
 };

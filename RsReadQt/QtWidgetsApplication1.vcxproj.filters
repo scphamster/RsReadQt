@@ -67,10 +67,25 @@
     <ClCompile Include="ArincChartView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="_ArincLabelModel.cpp">
+    <ClCompile Include="arinc_label_model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="_ArincChartView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="reading_thread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="labels_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="arinc_data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="arinc_label.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="arinc_label_item.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -90,10 +105,22 @@
     <QtMoc Include="ArincChartView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="_ArincLabelModel.hpp">
+    <QtMoc Include="arinc_label_model.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="_ArincChartView.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="labels_info.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="reading_thread.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="scroll_bar.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="line_series.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -125,6 +152,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="arinc_model_configs.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="deque_s.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="supermap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="serial_private.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="arinc_label.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="arinc_label_item.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="proxy_arinc_label_item.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="child_container.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

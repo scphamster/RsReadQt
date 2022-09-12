@@ -1,26 +1,14 @@
 #pragma once
 
-#include <QString>
-#include <QDateTime>
-#include <QList>
-
-#include <QObject>
-#include <QWidget>
-#include <QLineEdit>
-#include <QCheckBox>
-#include <QPainter>
-
-#include <QTreeView>
-#include <QTreeWidget>
-#include <QTableWidget>
-#include <QStandardItemModel>
-#include <QStyledItemDelegate>
-
 #include <algorithm>
 
-#include "_ArincLabelModel.hpp"
-#include "arinc.hpp"
+#include <QStandardItem>
+#include <QList>
+
+#include "arinc_label_model.hpp"
 #include "arinc_model_configs.hpp"
+
+class QCheckBox;
 
 class ArincMsgItem {
   public:
@@ -34,19 +22,9 @@ class ArincMsgItem {
         Data
     };
 
-    explicit ArincMsgItem(int counter, const QDateTime &arrival_time, const ArincMsg &data)
-      : number{ counter }
-      , arrivalTime{ arrival_time }
-      , arincMsg{ data }
-    {
-        params.insert(Parameter::Counter, new QStandardItem{});
-        params.at(Counter)->setData(counter, Qt::ItemDataRole::DisplayRole);
+    explicit ArincMsgItem(int counter, const QDateTime &arrival_time, const ArincMsg &data);
 
-        params.insert(Parameter::ArrivalTime, new QStandardItem{});
-        params.at(ArrivalTime)->setText(arrival_time.toString("hh:mm:ss:zzz"));
-    }
-
-    decltype(auto) GetRow() const noexcept { return params; }
+    QList<QStandardItem *> GetRow() const noexcept;
 
   private:
     int                    number = Undefined;
@@ -85,12 +63,9 @@ class LabelItem {
     void SetLabel(int label);
     void SetFirstOccurrence(const QDateTime &at_moment);
     void SetLastOccurrence(const QDateTime &at_moment);
-    void SetShowOnDiagram(int status)
-    {
-        params.at(Parameter::ShowOnDiagram)->setCheckState(static_cast<Qt::CheckState>(status));
-    }
-    void SetHide(int status) { params.at(Parameter::Hide)->setCheckState(static_cast<Qt::CheckState>(status)); }
-    void SetShow(int status) { params.at(Parameter::ShowOnDiagram)->setCheckState(static_cast<Qt::CheckState>(status)); }
+    void SetShowOnDiagram(int status);
+    void SetHide(int status);
+    void SetShow(int status);
     void SetData(Parameter parameter, QVariant *data);
 
     // getters
@@ -149,7 +124,7 @@ class LabelFilterView : public QTreeView {
     // Q_OBJECT
 
   public:
-    explicit LabelFilterView(std::shared_ptr<_ArincLabelModel> model, QWidget *parent = nullptr)
+    explicit LabelFilterView(std::shared_ptr<ArincLabelModel2> model, QWidget *parent = nullptr)
       : QTreeView{ parent }
     {
         _model = model;
@@ -185,7 +160,7 @@ class LabelFilterView : public QTreeView {
     QCheckBox                        *hideAllChBox = nullptr;
     QCheckBox                        *showAllChBox = nullptr;
     QCheckBox                        *hideNew      = nullptr;
-    std::shared_ptr<_ArincLabelModel> _model;
+    std::shared_ptr<ArincLabelModel2> _model;
 };
 
 class LabelsInfoView : public QTreeView {
@@ -197,7 +172,7 @@ class LabelsInfoView : public QTreeView {
 
         setSortingEnabled(true);
         setAlternatingRowColors(true);
-        
+
         hideColumn(static_cast<Column>(ArincTreeData::ColumnRole::Hide));
     }
 };

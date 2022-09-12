@@ -1,43 +1,14 @@
 #pragma once
+#include <QWidget>
+#include <QDateTime>
 
-#include "arinc.hpp"
-
-class LineSeries : public QLineSeries {
-    Q_OBJECT
-
-  public:
-    template<typename... Args>
-    explicit LineSeries(Args... args)
-      : QLineSeries(std::forward<Args>(args)...)
-    { }
-
-    void SetMarkerVisibility(bool visible);
-    bool MarkerIsVisible() { return isVisible; }
-
-  private:
-    QImage _lightMarker;
-    QImage _selectedLightMarker;
-    bool   isVisible = true;
-};
-
-class ScrollBar : public QScrollBar {
-    Q_OBJECT
-
-  public:
-    template<typename... Args>
-    explicit ScrollBar(Args... args)
-      : QScrollBar(std::forward<decltype(args)>(args)...)
-    { }
-
-    bool ShouldSkipValueAdjustment() { return skipValueAdjustment; }
-    bool ShouldSkipValueChangedEvt() { return skipValueChangedEvt; }
-    void SetSkipValueAjustment(bool skip) { skipValueAdjustment = skip; }
-    void SetSkipValueChangedEvt(bool skip) { skipValueChangedEvt = skip; }
-
-  private:
-    bool skipValueAdjustment = false;
-    bool skipValueChangedEvt = false;
-};
+class QCheckBox;
+class ArincMsg;
+class ScrollBar;
+class QValueAxis;
+class LineSeries;
+class QChartView;
+class QChart;
 
 // TODO: make QWidget protected
 class ArincLabelsChart : public QWidget {
@@ -49,17 +20,16 @@ class ArincLabelsChart : public QWidget {
 
     ArincLabelsChart() = default;
     explicit ArincLabelsChart(QWidget *parent);
-    
+
     void OnLabelOnChartSelected(const QPointF &);
-    
+
     void Append(std::shared_ptr<ArincMsg>);
     void AddLabel(int channel, int labelIdx);
-    
-    bool GetDataFromLabelOnChart(const QPointF &);
-    int  GetIdxOfSelectedMessage() { return idxOfSelectedMsg; }
-    auto GetLabelMarker(int label) { return labelsSeries.at(label).first->lightMarker(); }
 
-    bool IsSomeLabelSelected() const noexcept { return idxOfSelectedMsg != ItemSelection::NOTSELECTED; }
+    bool SetMsgOnChartToSelectedState(const QPointF &);
+    int  GetIdxOfSelectedMessage();
+    auto GetLabelMarker(int label);
+    bool IsSomeLabelSelected() const noexcept;
 
   protected:
     void resizeEvent(QResizeEvent *evt) override;
@@ -77,7 +47,7 @@ class ArincLabelsChart : public QWidget {
     bool eventFilter(QObject *obj, QEvent *evt) override;
 
     QDateTime   startOfOperation;
-    uint64_t    idxOfSelectedMsg          = NOTSELECTED;
+    uint64_t    idxOfSelectedMsg        = NOTSELECTED;
     LineSeries *seriesOwningSelectedMsg = nullptr;
 
     QCheckBox  *autoRangeChBox = nullptr;

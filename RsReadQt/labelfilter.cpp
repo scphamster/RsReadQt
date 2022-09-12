@@ -1,5 +1,25 @@
 #include "labelfilter.hpp"
-#include "_ArincLabelModel.hpp"
+#include "arinc_label_model.hpp"
+
+
+
+ArincMsgItem::ArincMsgItem(int counter, const QDateTime &arrival_time, const ArincMsg &data)
+  : number{ counter }
+  , arrivalTime{ arrival_time }
+  , arincMsg{ data }
+{
+    params.insert(Parameter::Counter, new QStandardItem{});
+    params.at(Counter)->setData(counter, Qt::ItemDataRole::DisplayRole);
+
+    params.insert(Parameter::ArrivalTime, new QStandardItem{});
+    params.at(ArrivalTime)->setText(arrival_time.toString("hh:mm:ss:zzz"));
+}
+
+QList<QStandardItem *>
+ArincMsgItem::GetRow() const noexcept
+{
+    return params;
+}
 
 LabelItem::LabelItem(int              label = SpecialLabel::New,
                      const QImage    &label_img,
@@ -18,12 +38,13 @@ LabelItem::LabelItem(int              label = SpecialLabel::New,
     else
         params.at(Name)->setText(QString::number(label, 8));
 
-    if (not  label_img.isNull())
+    if (not label_img.isNull())
         params.at(Name)->setData(
           label_img.scaled(20, 20, Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation),
           Qt::ItemDataRole::DecorationRole);
 
-    params.at(Name)->setFlags(Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsSelectable);
+    params.at(Name)->setFlags(Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsEditable |
+                              Qt::ItemFlag::ItemIsSelectable);
 
     params.insert(Parameter::FirstOccurrence, new QStandardItem{});
     params.at(Parameter::FirstOccurrence)->setText(first_occurrence.toString("hh:mm:ss:zzz"));
@@ -53,6 +74,22 @@ LabelItem::LabelItem(int              label = SpecialLabel::New,
     params.at(Hide)->setFlags(Qt::ItemFlag::ItemIsEnabled | Qt::ItemIsUserCheckable);
 }
 
+void
+LabelItem::SetShowOnDiagram(int status)
+{
+    params.at(Parameter::ShowOnDiagram)->setCheckState(static_cast<Qt::CheckState>(status));
+}
+void
+LabelItem::SetHide(int status)
+{
+    params.at(Parameter::Hide)->setCheckState(static_cast<Qt::CheckState>(status));
+}
+void
+LabelItem::SetShow(int status)
+{
+    params.at(Parameter::ShowOnDiagram)->setCheckState(static_cast<Qt::CheckState>(status));
+}
+
 ArincLabelModel::ArincLabelModel()
 {
     for (int i = 0; const auto &string : headerNames) {
@@ -63,26 +100,25 @@ ArincLabelModel::ArincLabelModel()
         setHorizontalHeaderItem(i++, h_item);
     }
 
-    //test purpouse
+    // test purpouse
     auto label  = new LabelItem{ 200, QImage{}, QDateTime::currentDateTime() };
     labels[200] = label;
     insertRow(0, label->GetRow());
 
-    //setData(index(0, Parameter::ArincMsgs), std::vector<std::shared_ptr<ArincMsg>>{});
+    // setData(index(0, Parameter::ArincMsgs), std::vector<std::shared_ptr<ArincMsg>>{});
 
     emit dataChanged(index(0, 0), index(0, 0));
 
     labels[230] = new LabelItem{ 230 };
     insertRow(0, labels.at(230)->GetRow());
-    //end test
+    // end test
 
     connect(this, &QStandardItemModel::dataChanged, this, &ArincLabelModel::OnDataChange);
 }
 
-
 //
-//void
-//LabelFilterView::resizeEvent(QResizeEvent *evt)
+// void
+// LabelFilterView::resizeEvent(QResizeEvent *evt)
 //{
 //    constexpr auto chboxW = 120, chboxH = 20;
 //    constexpr auto chbox1LPos = 15, chbox2LPos = chbox1LPos + chboxW, chbox3LPos = chbox2LPos + chboxW;

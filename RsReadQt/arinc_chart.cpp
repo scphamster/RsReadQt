@@ -1,7 +1,15 @@
 #include <QMainWindow>
+#include <QLayout>
+
+#include <QChart>
+#include <QChartView>
+#include <QValueAxis>
+#include <QCheckBox>
 
 #include "arinc_chart.hpp"
 #include "arinc.hpp"
+#include "scroll_bar.hpp"
+#include "line_series.hpp"
 
 void
 LineSeries::SetMarkerVisibility(bool make_visible)
@@ -9,18 +17,19 @@ LineSeries::SetMarkerVisibility(bool make_visible)
     if (make_visible == isVisible)
         return;
 
-    if (make_visible == false) {
+    if (make_visible) {
+        setLightMarker(_lightMarker);
+        setSelectedLightMarker(_selectedLightMarker);
+
+        isVisible = make_visible;
+    }
+    else {
         _lightMarker         = lightMarker();
         _selectedLightMarker = selectedLightMarker();
 
         setLightMarker(QImage{});
         setSelectedLightMarker(QImage{});
 
-        isVisible = make_visible;
-    }
-    else {
-        setLightMarker(_lightMarker);
-        setSelectedLightMarker(_selectedLightMarker);
         isVisible = make_visible;
     }
 }
@@ -85,28 +94,29 @@ ArincLabelsChart::ArincLabelsChart(QWidget *mainWindow)
 void
 ArincLabelsChart::OnLabelOnChartSelected(const QPointF &point)
 {
-    GetDataFromLabelOnChart(point);
+    SetMsgOnChartToSelectedState(point);
 }
 
 bool
-ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
+ArincLabelsChart::SetMsgOnChartToSelectedState(const QPointF &at_point)
 {
-    int label = static_cast<int>(atPoint.y());
+    int label = static_cast<int>(at_point.y());
 
-    if (not  labelsSeries.contains(label))
+    if (not labelsSeries.contains(label))
         return false;
 
     const auto &dataVector = labelsSeries.at(label).second;
     const auto  series     = labelsSeries.at(label).first;
 
-    auto point_and_msg_itr = std::find_if(dataVector.rbegin(), dataVector.rend(), [&atPoint](const auto &pointAndData) {
-        if (pointAndData.first == atPoint.x()) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    });
+    auto point_and_msg_itr =
+      std::find_if(dataVector.rbegin(), dataVector.rend(), [&at_point](const auto &point_and_data) {
+          if (point_and_data.first == at_point.x()) {
+              return true;
+          }
+          else {
+              return false;
+          }
+      });
 
     if (point_and_msg_itr != dataVector.rend()) {
         idxOfSelectedMsg = (point_and_msg_itr->second->msgNumber);
@@ -116,8 +126,8 @@ ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
         // set point on chart which belongs to series "series" to selected state and remember that series for deselection
         // in future
         int  idx      = 0;
-        auto iterator = std::find_if(points.begin(), points.end(), [&idx, &atPoint](auto &point) {
-            if (point.x() == atPoint.x())
+        auto iterator = std::find_if(points.begin(), points.end(), [&idx, &at_point](auto &point) {
+            if (point.x() == at_point.x())
                 return true;
             else
                 idx++;
@@ -138,6 +148,23 @@ ArincLabelsChart::GetDataFromLabelOnChart(const QPointF &atPoint)
         }
     }
     return false;
+}
+
+int
+ArincLabelsChart::GetIdxOfSelectedMessage()
+{
+    return idxOfSelectedMsg;
+}
+auto
+ArincLabelsChart::GetLabelMarker(int label)
+{
+    return labelsSeries.at(label).first->lightMarker();
+}
+
+bool
+ArincLabelsChart::IsSomeLabelSelected() const noexcept
+{
+    return idxOfSelectedMsg != ItemSelection::NOTSELECTED;
 }
 
 void
@@ -167,6 +194,7 @@ ArincLabelsChart::AddLabel(int channel, int labelIdx)
     auto label_txt_pos    = QPoint{ text_left_padding, label_idx_line_h };
     auto background_brush = QBrush{ QColor{ 255, 255, 255, 0 } };
 
+    // nonselected marker image creation
     auto marker_img = new QImage{ imgsize, imgsize, QImage::Format::Format_ARGB32 };
     marker_img->fill(QColor(0, 0, 0, 0));
 
@@ -204,6 +232,7 @@ ArincLabelsChart::AddLabel(int channel, int labelIdx)
     series.setMarkerSize(marker_size);
     series.setLightMarker(*marker_img);
 
+    // selected marker creation
     auto sel_marker_img = new QImage(imgsize, imgsize, QImage::Format::Format_ARGB32);
     sel_marker_img->fill(QColor(0, 0, 0, 0));
     auto painter2 = QPainter{ sel_marker_img };
@@ -298,7 +327,7 @@ ArincLabelsChart::_AdjustScrollToAxis(ScrollBar *scroll, qreal min, qreal max)
 void
 ArincLabelsChart::_AdjustAxisToScroll(QValueAxis *axis, ScrollBar *scroll, int value)
 {
-    constexpr qreal minimumValue = 0;
+    constexpr qreal min_val = 0;
 
     if (scroll->ShouldSkipValueChangedEvt()) {
         scroll->SetSkipValueChangedEvt(false);
@@ -316,7 +345,7 @@ ArincLabelsChart::Append(std::shared_ptr<ArincMsg> msg)
     constexpr auto  hscroll_overshoot                   = 10;
     constexpr qreal auto_x_range_change_olddata_percent = 0.3;
 
-    if (not  labelsSeries.contains(msg->labelRaw))
+    if (not labelsSeries.contains(msg->labelRaw))
         AddLabel(msg->channel, msg->labelRaw);
 
     auto msg_time = (-1) * static_cast<qreal>(msg->timeArrivalPC.msecsTo(startOfOperation)) / 1000;
@@ -360,6 +389,8 @@ ArincLabelsChart::SetLabelVisibility(int label, Qt::CheckState checkstate)
 bool
 ArincLabelsChart::eventFilter(QObject *obj, QEvent *evt)
 {
+    constexpr bool propagate_event_further = false, do_not_propagate_event = true;
+
     if (evt->type() == QEvent::Type::MouseButtonPress) {
         idxOfSelectedMsg = ArincLabelsChart::ItemSelection::NOTSELECTED;
 
@@ -368,8 +399,8 @@ ArincLabelsChart::eventFilter(QObject *obj, QEvent *evt)
             seriesOwningSelectedMsg = nullptr;
         }
 
-        return true;
+        return do_not_propagate_event;
     }
 
-    return false;
+    return propagate_event_further;
 }

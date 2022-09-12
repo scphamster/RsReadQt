@@ -13,10 +13,15 @@
 #include <QAbstractItemView>
 
 #include "arinc_model_configs.hpp"
+#include "arinc_chart.hpp"
 
 class ArincMsg;
 class QDateTime;
+class QMainWindow;
+class QChartLabelDrawerData;
+class QChartLabelDrawer;
 class _ArincChartView;
+class ArincLabelModel2;
 
 using XPositionT = double;
 
@@ -52,7 +57,7 @@ class ViewArincLabel {
 
     ViewArincLabel() = default;
 
-    explicit ViewArincLabel(LabelNumT labelnum = static_cast<LabelNumT>(Undefined), QImage marker = QImage{})
+    explicit ViewArincLabel(LabelNumT labelnum = static_cast<LabelNumT>(Undefined), ImageType marker = ImageType{})
       : labelNumber{ labelnum }
       , labelMarker{ marker }
     { }
@@ -60,7 +65,7 @@ class ViewArincLabel {
     auto GetMarkerImage() const noexcept { return labelMarker; }
     auto GetLabelNumber() const noexcept { return labelNumber; }
 
-    auto AppendMsg(auto msg) { items.push_back(msg); }
+    auto InsertMsg(auto msg) { items.push_back(msg); }
 
     decltype(auto) begin() const noexcept(noexcept(std::declval<decltype(items)>().begin())) { return items.begin(); }
     decltype(auto) end() const noexcept(noexcept(std::declval<decltype(items)>().end())) { return items.end(); }
@@ -70,7 +75,7 @@ class ViewArincLabel {
 
   private:
     LabelNumT                                        labelNumber = Undefined;
-    QImage                                           labelMarker;
+    ImageType                                        labelMarker;
     std::vector<std::shared_ptr<ViewArincLabelItem>> items;
 };
 
@@ -81,7 +86,7 @@ class ViewArincLabels {
     [[nodiscard]] auto GetVisibleItemsAtArea(auto area);
     [[nodiscard]] auto GetLabel(LabelNumT label);
     auto               AppendLabel(auto label) { labels.push_back(label); }
-    bool AppendMsg(auto msg, auto xpos);   // check if label exists, if no -> create new // else append to label
+    bool InsertMsg(auto msg, auto xpos);   // check if label exists, if no -> create new // else append to label
     [[nodiscard]] auto ContainsLabel(auto label) const
     {
         return std::any_of(labels.begin(), labels.end(), [&label](const auto &viewlabel) {
@@ -101,122 +106,86 @@ class ViewArincLabels {
     std::vector<std::shared_ptr<ViewArincLabel>> labels;
 };
 
-class DrawerQChart {
-  public:
-    explicit DrawerQChart(_ArincChartView *view, QWidget *viewport)
-      : arincView{ view }
-      , viewPort{ viewport }
-    {
-        // test
-        chart  = new QChart{};
-        chview = new QChartView{ chart, viewPort };
-        chart->setParent(chview);
-        chview->resize(QSize{ 600, 600 });
-        // chart->setTitle("Labels");
-        chart->legend()->setVisible(false);
-
-        chart->setTheme(QChart::ChartTheme::ChartThemeBrownSand);
-        // end test
-    }
-
-  protected:
-    void PointOnChartBeenSelected(QPoint);
-    void PointOnChartBeenDeselected(QPoint);
-
-  private:
-    QWidget         *viewPort  = nullptr;
-    _ArincChartView *arincView = nullptr;
-
-    QChart     *chart  = nullptr;
-    QChartView *chview = nullptr;
-    QValueAxis *vaxis  = nullptr;
-    QValueAxis *haxis  = nullptr;
-};
-
-template<typename ImageType>
-class LabelDrawer {
+class LabelDrawer : public QObject {
   public:
     virtual ~LabelDrawer() = default;
 
-    virtual void             Init()                       = 0;
-    virtual void             SetParent(_ArincChartView *) = 0;
-    virtual void             SetViewPort(QWidget *viewport) { viewPort = viewport; }
-    virtual void             AddLabel(LabelNumT label, const ImageType &msg_marker) = 0;
-    virtual void             AppendLabelMsg(std::shared_ptr<ArincMsg> msg)          = 0;
-    virtual void             SetAutoScrollToLatestMsg(bool set_to_auto = true)      = 0;
-    virtual void             HandlePaintEvent(QPaintEvent *event){};
-    virtual void             Resize(const QSize &newsize)             = 0;
-    virtual void             OnLabelOnChartSelected(const QPointF &)  = 0;
-    virtual bool             GetDataFromLabelOnChart(const QPointF &) = 0;
-    virtual int              GetIdxOfSelectedMessage()                = 0;
-    virtual const ImageType &GetLabelMarker(int label)                = 0;
-    virtual bool             IsSomeLabelSelected()                    = 0;
+    virtual void                      Init()                                                 = 0;
+    virtual void                      SetParent(_ArincChartView *)                           = 0;
+    virtual void                      SetUltraParent(QWidget *parent)                        = 0;
+    virtual void                      AddLabel(LabelNumT label, const ImageType &msg_marker) = 0;
+    virtual void                      AppendLabelMsg(std::shared_ptr<ArincMsg> msg)          = 0;
+    virtual void                      SetAutoScrollToLatestMsg(bool set_to_auto = true)      = 0;
+    virtual void                      HandlePaintEvent(QPaintEvent *event){};
+    virtual void                      Resize(const QSize &newsize)             = 0;
+    virtual void                      OnLabelOnChartSelected(const QPointF &)  = 0;
+    virtual bool                      GetDataFromLabelOnChart(const QPointF &) = 0;
+    virtual int                       GetIdxOfSelectedMessage()                = 0;
+    virtual ImageType                 GetLabelMarker(int label)                = 0;
+    virtual bool                      IsSomeLabelSelected()                    = 0;
+    [[nodiscard]] virtual QChartView *GetChView() const noexcept               = 0;
+    virtual void                      SetLabelVisibility(LabelNumT, bool)      = 0;
 
   protected:
-    // void resizeEvent(QResizeEvent *evt) override;
-    // void wheelEvent(QWheelEvent *evt) override;
-    // void _AdjustAxisToScroll(QValueAxis *axis, ScrollBar *scroll, int value);
-    // void _AdjustScrollToAxis(ScrollBar *scroll, qreal min, qreal max);
-
-    QWidget *viewPort = nullptr;
-
-    // signals:
-    //   void MsgOnChartBeenSelected(uint64_t msgN);
-
-    // public slots:
-    //   void SetLabelVisibility(int label, Qt::CheckState checkstate);
-
   private:
-    // bool eventFilter(QObject *obj, QEvent *evt) override;
 };
 
-template<typename ImageType>
-class QChartLabelDrawer : public LabelDrawer<ImageType> {
-  public:
-    ~QChartLabelDrawer(){};
-    void AddLabel(LabelNumT label, const ImageType &msg_marker) override { }
-    void AppendLabelMsg(std::shared_ptr<ArincMsg> msg) override { }
-    void SetAutoScrollToLatestMsg(bool set_to_auto = true) override { }
-    void Init() override
-    {
-        // test
-        chart  = new QChart{};
-        chview = new QChartView{ chart, LabelDrawer<ImageType>::viewPort };
-        chart->setParent(chview);
-        chview->resize(
-          QSize{ LabelDrawer<ImageType>::viewPort->size().width(), LabelDrawer<ImageType>::viewPort->size().height() });
-        // chart->setTitle("Labels");
-        chart->legend()->setVisible(false);
+// TODO: implement add label and appendLabelMsg
+class QChartLabelDrawer : public LabelDrawer {
+    Q_OBJECT
 
-        chart->setTheme(QChart::ChartTheme::ChartThemeBrownSand);
-        // end test
-    }
-    void             SetParent(_ArincChartView *new_parent){ parent = new_parent };
-    void             Resize(const QSize &newsize) override { chview->resize(newsize); }
-    int              GetIdxOfSelectedMessage() override { return idxOfSelectedMsg; }
-    void             OnLabelOnChartSelected(const QPointF &) override;
-    void             SetAutoScrollToLatestMsg(bool set_to_auto = true);
-    bool             GetDataFromLabelOnChart(const QPointF &) override;
-    const ImageType &GetLabelMarker(int label) override;
-    bool             IsSomeLabelSelected() override;
+  public:
+    using PointF               = QPointF;
+    using DeselectionCallbackF = std::function<void()>;
+
+    QChartLabelDrawer();
+    ~QChartLabelDrawer();
+    void                      SetParent(_ArincChartView *new_parent) override { myParent = new_parent; }
+    void                      SetUltraParent(QWidget *parent) override { myMainWindow = parent; }
+    void                      AddLabel(LabelNumT label, const ImageType &msg_marker) override;
+    void                      AppendLabelMsg(std::shared_ptr<ArincMsg> msg) override;
+    void                      SetAutoScrollToLatestMsg(bool set_to_auto = true) override { }   // unimpl
+    void                      Init() override;
+    void                      Resize(const QSize &newsize) override { chview->resize(newsize); }
+    int                       GetIdxOfSelectedMessage() override { return 0; }             // unimpl
+    void                      OnLabelOnChartSelected(const QPointF &) override;            // unimpl
+    bool                      GetDataFromLabelOnChart(const QPointF &) override;           // unimpl
+    ImageType                 GetLabelMarker(int label) override { return ImageType{}; }   // unimpl
+    bool                      IsSomeLabelSelected() override { return false; }             // unimpl
+    [[nodiscard]] QChartView *GetChView() const noexcept override { return chview; }
+    void                      SetLabelVisibility(LabelNumT, bool make_visible = true) override;
+    void                      UnselectAll();
+
+  public slots:
+    void OnMsgOnChartBeenSelected(const PointF &at_point);
+
+  protected:
+    void AdjustAxles(PointF to_accommodate_point);
 
   private:
-    QChart          *chart  = nullptr;
-    QChartView      *chview = nullptr;
-    QValueAxis      *vaxis  = nullptr;
-    QValueAxis      *haxis  = nullptr;
-    _ArincChartView *parent = nullptr;
+    bool eventFilter(QObject *obj, QEvent *evt) override;
+
+    std::map<LabelNumT, std::unique_ptr<QChartLabelDrawerData>> labels;
+    _ArincChartView                                            *myParent     = nullptr;
+    QWidget                                                    *myMainWindow = nullptr;
+    QChart                                                     *chart        = nullptr;
+    QChartView                                                 *chview       = nullptr;
+    QValueAxis                                                 *vaxis        = nullptr;
+    QValueAxis                                                 *haxis        = nullptr;
+    QWidget                                                    *viewPort     = nullptr;
+
+    std::pair<bool, DeselectionCallbackF> handleOfSelectedMsg;
 };
 
 class _ArincChartView : public QAbstractItemView {
     Q_OBJECT
   public:
-    template<typename ImageType>
-    explicit _ArincChartView(std::unique_ptr<LabelDrawer<ImageType>> drawer, ::QWidget *parent = nullptr)
+    _ArincChartView(std::unique_ptr<LabelDrawer> drawer, ::QWidget *parent = nullptr)
       : chart{ std::move(drawer) }
       , QAbstractItemView{ parent }
     {
-        chart->SetViewPort(viewport());
+        chart->SetParent(this);
+        chart->SetUltraParent(parent);
         chart->Init();
     }
 
@@ -244,14 +213,20 @@ class _ArincChartView : public QAbstractItemView {
     auto               DrawLabelMarkerAt(QPointF point) const;
     auto               DrawLabelsAtArea(QRectF area) const;
 
+    [[nodiscard]] QDateTime const &GetStartOfOperation() const noexcept;
+    [[nodiscard]] ImageType        GetLabelImage(LabelNumT label) const
+      noexcept(std::is_nothrow_constructible_v<ImageType, ImageType &>);
+
     auto ConvertTimeDifferenceToXPos(auto msecs_from_start) const noexcept { return msecs_from_start; }
+    
+    [[nodiscard]] QChartView *GetChView() const noexcept { return chart->GetChView(); }
 
   public slots:
     void ArincMsgInserted(std::shared_ptr<ArincMsg> msg);
 
   protected:
   private:
-    QDateTime                            startOfOperation;
-    ViewArincLabels                      labelsContainer;
-    std::unique_ptr<LabelDrawer<QImage>> chart;
+    std::unique_ptr<LabelDrawer> chart;
+    ViewArincLabels              labelsContainer;
+    ArincLabelModel2            *arincModel = nullptr;
 };

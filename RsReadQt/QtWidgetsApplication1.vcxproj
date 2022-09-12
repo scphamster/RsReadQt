@@ -163,14 +163,26 @@
     <ClCompile Include="arinc.cpp" />
     <ClCompile Include="ArincChartView.cpp" />
     <ClCompile Include="arinc_chart.cpp" />
+    <ClCompile Include="arinc_data.cpp" />
+    <ClCompile Include="arinc_label.cpp" />
+    <ClCompile Include="arinc_label_item.cpp" />
     <ClCompile Include="labelfilter.cpp" />
+    <ClCompile Include="labels_info.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="reading_thread.cpp" />
     <ClCompile Include="Serial.cpp" />
     <ClCompile Include="serialconfig.cpp" />
     <ClCompile Include="serialthread.cpp" />
     <ClCompile Include="TextEdit.cpp" />
-    <ClCompile Include="_ArincChartView.cpp" />
-    <ClCompile Include="_ArincLabelModel.cpp" />
+    <ClCompile Include="_ArincChartView.cpp">
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).moc</QtMocFileName>
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='d2|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='d2|x64'">%(Filename).moc</QtMocFileName>
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Release|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
+    </ClCompile>
+    <ClCompile Include="arinc_label_model.cpp" />
     <QtRcc Include="mainwindow.qrc" />
     <QtUic Include="mainwindow.ui" />
     <QtMoc Include="mainwindow.h" />
@@ -183,14 +195,25 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.h" />
     <ClInclude Include="arinc.hpp" />
+    <ClInclude Include="arinc_label.hpp" />
+    <ClInclude Include="arinc_label_item.hpp" />
     <ClInclude Include="arinc_model_configs.hpp" />
+    <QtMoc Include="scroll_bar.hpp" />
+    <QtMoc Include="line_series.hpp" />
+    <ClInclude Include="child_container.hpp" />
+    <ClInclude Include="proxy_arinc_label_item.hpp" />
+    <ClInclude Include="serial_private.hpp" />
+    <ClInclude Include="supermap.hpp" />
     <QtMoc Include="_ArincChartView.h" />
-    <QtMoc Include="_ArincLabelModel.hpp" />
+    <QtMoc Include="arinc_label_model.hpp" />
     <QtMoc Include="arinc_chart.hpp" />
     <QtMoc Include="ArincChartView.h" />
     <ClInclude Include="datatrack.hpp" />
+    <ClInclude Include="deque_s.hpp" />
     <ClInclude Include="global_configs.hpp" />
     <ClInclude Include="labelfilter.hpp" />
+    <QtMoc Include="labels_info.hpp" />
+    <QtMoc Include="reading_thread.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Serial.h" />
     <QtMoc Include="TextEdit.h" />

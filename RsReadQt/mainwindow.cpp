@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-#include "serialconfig.h"
+
 #include <qmessagebox.h>
 #include <qtextedit.h>
 #include <qtimeline.h>
@@ -11,6 +11,10 @@
 #include <qlayout.h>
 #include <QtWidgets/qhboxlayout>
 
+#include "reading_thread.hpp"
+#include "serialthread.h"
+
+#include "serialconfig.h"
 
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)

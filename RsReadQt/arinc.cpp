@@ -1,3 +1,5 @@
+#include <deque>
+
 #include <qjsonobject.h>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -7,11 +9,32 @@
 #include <QMessageBox>
 
 #include "arinc.hpp"
+#include "Serial.h"
+#include "serial_private.hpp"
 
-Arinc::Arinc(const QString &decode_file_name)
-  : decodeSpecsFileName{ decode_file_name }
+class ArincDriver::ArincDriverImpl {
+  public:
+    bool                                                         anatomyIsConfigured = false;
+    bool                                                         newConfigsFile      = false;
+    uint64_t                                                     lastMsgReadedNum    = 0;
+    QString                                                      decodeSpecsFileName;
+    std::map<QString, DTWordField>                               DTMsgAnatomy;
+    std::deque<std::shared_ptr<ArincMsg>>                        messages;
+    std::map<ArincLabel, std::vector<std::shared_ptr<ArincMsg>>> labels;
+};
+
+ArincDriver::ArincDriver()
+  : impl{ std::make_unique<ArincDriverImpl>() }
+{ }
+
+ArincDriver::~ArincDriver() = default;
+
+ArincDriver::ArincDriver(const QString &decode_file_name)
+  : impl{ std::make_unique<ArincDriverImpl>() }
 {
-    if (decodeSpecsFileName.isEmpty()) {
+    SetDecodeConfigsFileName(decode_file_name);
+
+    if (decode_file_name.isEmpty()) {
         auto nofile = QMessageBox{
             QMessageBox::Icon::Critical,
             "File error",
@@ -25,14 +48,26 @@ Arinc::Arinc(const QString &decode_file_name)
 }
 
 void
-Arinc::GetDecodeConfigsFromFile()
+ArincDriver::SetDecodeConfigsFileName(const QString &filename) noexcept(std::is_nothrow_assignable_v<QString, QString &>)
 {
-    auto jsonfile = QFile{ decodeSpecsFileName };
+    impl->decodeSpecsFileName = filename;
+}
+
+QString const &
+ArincDriver::GetDecodeConfigsFileName() const noexcept
+{
+    return impl->decodeSpecsFileName;
+}
+
+void
+ArincDriver::GetDecodeConfigsFromFile()
+{
+    auto jsonfile = QFile{ GetDecodeConfigsFileName() };
     jsonfile.open(QIODeviceBase::OpenModeFlag::ReadOnly);
     auto fileContents = jsonfile.readAll();
     jsonfile.close();
 
-    DTMsgAnatomy.clear();
+    impl->DTMsgAnatomy.clear();
 
     QJsonParseError err;
     QJsonDocument   jsondoc{ QJsonDocument::fromJson(fileContents, &err) };
@@ -40,7 +75,7 @@ Arinc::GetDecodeConfigsFromFile()
     if (err.error != QJsonParseError::NoError) {
         QMessageBox errorMsg{ QMessageBox::Warning,
                               "Json file Error",
-                              "Error occured during json file \" " + decodeSpecsFileName +
+                              "Error occured during json file \" " + GetDecodeConfigsFileName() +
                                 "\" opening, Error: " + err.errorString() };
 
         assert(0);
@@ -57,7 +92,7 @@ Arinc::GetDecodeConfigsFromFile()
 
     auto chunks = configObj["Parts"].toObject();
 
-    DTMsgAnatomy.clear();
+    impl->DTMsgAnatomy.clear();
 
     for (auto chunkName : msgChunkNames) {
         auto configs = chunks[chunkName.toString()].toObject();
@@ -74,7 +109,7 @@ Arinc::GetDecodeConfigsFromFile()
 
             };
 
-            anatomyIsConfigured = false;
+            impl->anatomyIsConfigured = false;
             return;
         }
 
@@ -86,7 +121,7 @@ Arinc::GetDecodeConfigsFromFile()
                   " has active bits number exceeding number of bits calculated from \"Mesaage length bytes\""
             };
 
-            anatomyIsConfigured = false;
+            impl->anatomyIsConfigured = false;
             return;
         }
 
@@ -116,14 +151,14 @@ Arinc::GetDecodeConfigsFromFile()
                                  " has undefined encoding. Valid types are: BIN, DEC, OCT, HEX, BCD" };
         }
 
-        DTMsgAnatomy[chunkName.toString()] = std::move(chunk);
+        impl->DTMsgAnatomy[chunkName.toString()] = std::move(chunk);
     }
 
-    anatomyIsConfigured = true;
+    impl->anatomyIsConfigured = true;
 }
 
 void
-Arinc::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
+ArincDriver::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
 {
     auto firstByteNum = configs.activeBits.first / 8;
     auto lastByteNum  = configs.activeBits.second / 8;
@@ -188,34 +223,64 @@ Arinc::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, 
 }
 
 void
-Arinc::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
+ArincDriver::MsgPushBack(auto msg)
+{
+    impl->messages.push_back(msg);
+}
+
+void
+ArincDriver::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 {
     auto msg = std::make_shared<ArincMsg>();
 
-    if (decodeSpecsFileName == QString{})
+    if (GetDecodeConfigsFileName() == QString{})
         return;
 
     msg->timeArrivalPC = rawData->msg_arrival_time;
-    msg->msgNumber     = rawData->msg_counter;
+    msg->msgNumber     = rawData->msgIdx;
 
-    for (auto &msgChunk : DTMsgAnatomy) {
+    for (auto &msgChunk : impl->DTMsgAnatomy) {
         if (msgChunk.second.activeBits.first / 8 >= rawData->bytes_in_buffer ||
             msgChunk.second.activeBits.second / 8 >= rawData->bytes_in_buffer) {
             QMessageBox err{ QMessageBox::Critical, "Data read error", "Not enough bytes in buffer" };
         }
     }
 
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Channel"], msg->channel);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Label"], msg->labelRaw);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["SDI"], msg->SDI);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Data"], msg->valueRaw);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["SSM"], msg->SSM);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Parity"], msg->parity);
-    NormalizeMsgItem(rawData, DTMsgAnatomy["Time"], msg->DTtimeRaw);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["Channel"], msg->channel);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["Label"], msg->labelRaw);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["SDI"], msg->SDI);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["Data"], msg->valueRaw);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["SSM"], msg->SSM);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["Parity"], msg->parity);
+    NormalizeMsgItem(rawData, impl->DTMsgAnatomy["Time"], msg->DTtimeRaw);
 
     msg->label.InitByCode(msg->labelRaw);
     msg->_label.Set(msg->labelRaw);
 
-    messages.push_back(msg);
-    labels[msg->label].push_back(msg);
+    impl->messages.push_back(msg);
+    impl->labels[msg->label].push_back(msg);
+}
+
+std::shared_ptr<ArincMsg>
+ArincDriver::FirstMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>)
+{
+    return impl->messages.front();
+}
+
+std::shared_ptr<ArincMsg>
+ArincDriver::LastMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>)
+{
+    return impl->messages.back();
+}
+
+ArincQModel::MsgNumT
+ArincDriver::GetLastReadedMsgNumber() const noexcept
+{
+    return impl->lastMsgReadedNum;
+}
+
+void
+ArincDriver::SetLastReadedMsgNumber(ArincQModel::MsgNumT count) noexcept
+{
+    impl->lastMsgReadedNum = count;
 }

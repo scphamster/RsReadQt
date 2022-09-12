@@ -1,36 +1,44 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include <vector>
-#include <ctime>
-
-#include "QString"
 #include <QTime>
-
 #include "Serial.h"
+#include "deque_s.hpp"
+#include "serial_private.hpp"
+#include "serialib.h"
 
-Serial::Serial(std::shared_ptr<_SerialConfigs<int, QString>> databridgeConfigs,
-               deque_s<std::shared_ptr<dataPacket>>         &databidgeData)
+Serial::Serial(std::shared_ptr<::SerialConfigs> databridgeConfigs, deque_s<std::shared_ptr<dataPacket>> &databidgeData)
   : serialConfigs{ databridgeConfigs }
   , databidgeData{ databidgeData }
+  , __serialdevice{ std::make_unique<serialib>() }
 { }
+
+Serial::~Serial()
+{
+    Stop();
+}
 
 char
 Serial::Open()
 {
-    return openDevice(serialConfigs->GetSelectedPortName().toLocal8Bit(),
-                      serialConfigs->GetSelectedBaudrate().first,
-                      SERIAL_DATABITS_8,   // TODO: make all parameters be taken from serialConfigs
-                      SERIAL_PARITY_NONE,
-                      SERIAL_STOPBITS_1);
+    return __serialdevice->openDevice(serialConfigs->GetSelectedPortName().toLocal8Bit(),
+                                      serialConfigs->GetSelectedBaudrate().first,
+                                      SERIAL_DATABITS_8,   // TODO: make all parameters be taken from serialConfigs
+                                      SERIAL_PARITY_NONE,
+                                      SERIAL_STOPBITS_1);
 }
 
 bool
-Serial::Read()
+Serial::IsOpen() const
 {
-    auto newdata = std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(),
-                                                dataPacketN++,
-                                                QDateTime::currentDateTime());
+    return __serialdevice->isDeviceOpen();
+}
 
-    auto ans = readBytes(newdata->data._Unchecked_begin(), newdata->data.size(), 0);
+bool
+Serial::Read() 
+{
+    auto newdata =
+      std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(), dataPacketN++, QDateTime::currentDateTime());
+
+    auto ans = __serialdevice->readBytes(newdata->data._Unchecked_begin(), newdata->data.size(), 0);
 
     if (ans <= 0) {
         err = ans;
@@ -45,6 +53,12 @@ Serial::Read()
     return true;
 }
 
+void 
+Serial::Flush() const
+{
+    __serialdevice->flushReceiver();
+}
+
 /**
  * @brief: closes devices if it was open
  *
@@ -53,8 +67,8 @@ Serial::Read()
 bool
 Serial::Stop()
 {
-    if (isDeviceOpen()) {
-        closeDevice();
+    if (__serialdevice->isDeviceOpen()) {
+        __serialdevice->closeDevice();
 
         return true;
     }
@@ -63,16 +77,7 @@ Serial::Stop()
     }
 }
 
-QString
-Serial::ConvRawToString(std::shared_ptr<Serial::dataPacket> data_item)
-{
-    QString retString;
-    // retString.append(data_item->data);
-
-    return retString;
-}
-
-std::shared_ptr<Serial::dataPacket>
+std::shared_ptr<dataPacket>
 Serial::GetData()
 {
     auto data_item = std::make_shared<dataPacket>();
@@ -81,33 +86,4 @@ Serial::GetData()
     }
 
     return data_item;
-}
-
-QString
-Serial::ConvRawToPrettyString(std::shared_ptr<dataPacket> data)
-{
-    // char        buffer[100];
-    // tm         *timeinfo  = new tm;
-    // std::time_t arvl_time = data->msg_arrival_time;
-
-    // localtime_s(timeinfo, &arvl_time);
-    // strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
-    // QString retstr = "Data Arival Time: ";
-    // retstr.append(buffer);
-
-    // retstr.append("   Bytes in buffer: ");
-    // retstr.append(std::to_wstring(data->bytes_in_buffer));
-
-    // retstr.append("RawData: ");
-
-    // for (int i = 0; (i < data->bytes_in_buffer) && (i < sizeof(data->data)); i++) {
-    //     retstr.append(std::to_wstring((data->data[i])));
-    //     retstr.append(" ");
-    // }
-    // retstr.append("\n");
-
-    // delete timeinfo;
-    // return retstr;
-
-    return QString{};
 }

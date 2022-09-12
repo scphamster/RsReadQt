@@ -1,17 +1,16 @@
 #pragma once
+#include <memory>
 
 #include "ui_mainwindow.h"
 #include <QtWidgets/QMainWindow>
-#include <qstring.h>
-#include <qdockwidget.h>
-#include <qtabwidget.h>
-#include <qtextedit.h>
-#include <qevent.h>
 
+#include "deque_s.hpp"
 #include "global_configs.hpp"
-#include "TextEdit.h"
-#include "serialthread.h"
-#include "Serial.h"   //this header should be last
+
+class dataPacket;
+class QTabWidget;
+class ReadingThread;
+class Output;
 
 class MainWindow : public QMainWindow,
                    public Ui::MainWindowClass {

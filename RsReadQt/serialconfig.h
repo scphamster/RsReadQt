@@ -2,8 +2,10 @@
 
 #include <QDialog>
 #include "ui_serialconfig.h"
-#include "Serial.h"
+//#include "Serial.h"
 
+#include "supermap.hpp"
+#include "serial_private.hpp"
 
 
 template<typename ConfigsT>
