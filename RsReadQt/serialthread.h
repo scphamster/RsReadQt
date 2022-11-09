@@ -127,4 +127,6 @@ class Output : public QObject {
     QListWidget                            *rawMessages = nullptr;
     LabelsInfo                             *labelsInfo  = nullptr;
     LabelConfigsModel                             *labels      = nullptr;
+
+    QString sessionStorage;
 };

@@ -197,6 +197,7 @@ Output::ShowNewData(void)
     NormalizeRawData(data, rawOutput);
 
     rawMessages->addItem(rawOutput);
+    sessionStorage.append(rawOutput).append('\n');
 
     if (not arincChart->IsSomeLabelSelected()) {
         rawMessages->scrollToBottom();
@@ -217,14 +218,10 @@ Output::SaveSession()
 {
     auto saveto_fileAddress = QFileDialog::getSaveFileName(nullptr, tr("Save session to file"), "LastSession.txt");
 
-    QString messagesText;
-
-    // test
-    // messagesText.append(textOutput->toPlainText());
     QFile lastSessionFile(saveto_fileAddress);
 
     lastSessionFile.open(QIODeviceBase::OpenModeFlag::Append);
-    lastSessionFile.write(messagesText.toLocal8Bit(), messagesText.length());
+    lastSessionFile.write(sessionStorage.toLocal8Bit(), sessionStorage.length());
     lastSessionFile.close();
 
     return true;
