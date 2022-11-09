@@ -15,16 +15,16 @@
 #include "supermap.hpp"
 #include "arinc_model_configs.hpp"
 
-class dataPacket;
+class DTdataPacket;
 template<std::integral, Appendable>
 class _SerialConfigs;
 class serialib;
 using SerialConfigs = _SerialConfigs<int, QString>;
 
-class Serial {
+class SerialInterface {
   public:
-    Serial(std::shared_ptr<::SerialConfigs>, deque_s<std::shared_ptr<dataPacket>> &);
-    ~Serial();
+    SerialInterface(std::shared_ptr<::SerialConfigs>, deque_s<std::shared_ptr<DTdataPacket>> &);
+    ~SerialInterface();
 
     char Open();
     bool IsOpen() const;
@@ -32,12 +32,12 @@ class Serial {
     void Flush() const;
     bool Stop();
 
-    std::shared_ptr<dataPacket> GetData();
+    std::shared_ptr<DTdataPacket> GetData();
 
   private:
     std::unique_ptr<serialib>                     __serialdevice;
     std::shared_ptr<_SerialConfigs<int, QString>> serialConfigs;
-    deque_s<std::shared_ptr<dataPacket>>         &databidgeData;
+    deque_s<std::shared_ptr<DTdataPacket>>         &databidgeData;
     ArincQModel::MsgNumT                          dataPacketN = 0;
     int                                           err         = 0;
 };

@@ -1,97 +1,63 @@
 #include <algorithm>
 
 #include <QMainWindow>
-#include <QScrollBar>
-#include <QFile>
 #include <QFileDialog>
-#include <QTime>
-#include <qtextedit.h>
-#include <qjsondocument.h>
-#include <qjsonobject.h>
-#include <qjsonarray.h>
-#include <QTextBlock>
-#include <QMessageBox>
 
-#include <QGraphicsScene>
-#include <QGraphicsView>
-#include <QtCharts/QChartView>
-#include <QtCharts/QChart>
-#include <QXYSeries>
-#include <QLineSeries>
-#include <QScatterSeries>
-#include <QSplineSeries>
-#include <QAbstractAxis>
-#include <QValueAxis>
-#include <QPixMap>
-#include <QPainter>
-
-#include <QList>
 #include <QListWidget>
-#include <QListView>
-
 #include <QLayout>
 
-#include "serialthread.h"
-//#include "arinc.hpp"
 #include "arinc_label_model.hpp"
-#include <Windows.h>
+#include "arinc_data_display.h"
 
 // test
 #include "labels_info.hpp"
 #include "_ArincChartView.h"
 #include "arinc.hpp"
-#include "Serial.h"
 #include "serial_private.hpp"
-
+#include "datatrack.hpp"
 // endtest
 
-Output::Output(deque_s<std::shared_ptr<::dataPacket>> &data,
+ArincDataDisplay::ArincDataDisplay(deque_s<std::shared_ptr<::DTdataPacket>> &data,
                std::shared_ptr<void>                   dataBridgeConfigs,
                QTabWidget                             *tabs,
                QMainWindow                            *parent)
-  : rawData{ data }
+  : rawDTData{ data }
   , tabWgt{ tabs }
   , myParent(parent)
-  , arinc{ std::make_unique<ArincDriver>(
-      std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetConfigsFileName()) }
+  , arincInterface{ std::make_unique<ArincPhysicalInterface>(
+      std::static_pointer_cast<SerialConfigs>(dataBridgeConfigs)->GetDTMsgConfigsFilename()) }
 {
     // arincChart = std::make_unique<ArincLabelsChart>(parent);
-    connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &Output::ScrollAndSelectMsg);
+    connect(arincChart.get(), &ArincLabelsChart::MsgOnChartBeenSelected, this, &ArincDataDisplay::ScrollAndSelectMsg);
 
     labels     = new ArincLabelModel{};
     arincModel = std::make_shared<ArincLabelModel2>();
 
     // test
     auto chview = new _ArincChartView{ std::make_unique<QChartLabelDrawer>(), parent };
-    // chview->resize(700, 700);
     chview->setModel(arincModel.get());
-    // chview->show();
-    //  endtest
-
-    // test2
     parent->centralWidget()->layout()->addWidget(chview);
-
-    // endtest2
+    // endtest
 
     CreateRawOutput();
     CreateLabelsInfo();
     CreateFilter();
 }
 
-Output::~Output() = default;
+ArincDataDisplay::~ArincDataDisplay() = default;
 
 void
-Output::CreateRawOutput()
+ArincDataDisplay::CreateRawOutput()
 {
-    rawMessages = new QListWidget{ tabWgt };
-    rawMessages->setUniformItemSizes(true);   // for better performance
-    rawMessages->setAlternatingRowColors(true);
+    rawArincMessages = new QListWidget{ tabWgt };
+    rawArincMessages->setUniformItemSizes(true);   // for better performance
+    rawArincMessages->setAlternatingRowColors(true);
 
-    tabWgt->addTab(rawMessages, "Raw");
+    tabWgt->addTab(rawArincMessages, "Raw");
 }
 
 void
-Output::CreateLabelsInfo()
+ArincDataDisplay::CreateLabelsInfo()
 {
     labelsInfo = new LabelsInfo{ tabWgt };
     labelsInfo->setSortingEnabled(true);
@@ -125,17 +91,17 @@ Output::CreateLabelsInfo()
 }
 
 void
-Output::CreateFilter()
+ArincDataDisplay::CreateFilter()
 {
     tabWgt->addTab(new LabelFilterView(arincModel), "filter");
 }
 
 void
-Output::NormalizeRawData(const auto &data, QString &appendHere)
+ArincDataDisplay::NormalizeRawData(const std::shared_ptr<DTdataPacket> &data, QString &appendHere)
 {
-    arinc->NormalizeAndStoreMsg(data);
+    arincInterface->NormalizeAndStoreMsg(data);
 
-    const auto &decoded = arinc->LastMsg();
+    const auto &decoded = arincInterface->LastMsg();
 
     appendHere.append(QString{ "Channel %1, Label %2, SDI %3, Data %4, SSM %5, Parity %6, Time %7" }
                         .arg(decoded->channel)
@@ -146,25 +112,25 @@ Output::NormalizeRawData(const auto &data, QString &appendHere)
                         .arg(decoded->parity)
                         .arg(decoded->DTtimeRaw));
 
-    arinc->SetLastReadedMsgNumber(decoded->msgNumber);
+    arincInterface->SetLastReadedMsgNumber(decoded->msgNumber);
 }
 
 void
-Output::ShowDiagram()
+ArincDataDisplay::ShowDiagram()
 {
-    const auto &data = arinc->LastMsg();
+    const auto &data = arincInterface->LastMsg();
     arincChart->Append(data);
 }
 
 void
-Output::ShowNewData(void)
+ArincDataDisplay::ShowNewData(void)
 {
-    if (rawData.empty() == true) {
+    if (rawDTData.empty() == true) {
         return;
     }
 
-    auto data = std::make_shared<dataPacket>();
-    rawData.pop_front_wait(data);
+    auto data = std::make_shared<DTdataPacket>();
+    rawDTData.pop_front_wait(data);
 
     QString rawOutput;
 
@@ -179,28 +145,28 @@ Output::ShowNewData(void)
 
     NormalizeRawData(data, rawOutput);
 
-    rawMessages->addItem(rawOutput);
+    rawArincMessages->addItem(rawOutput);
 
     // test
     // if (not arincChart->IsSomeLabelSelected()) {
-    //    rawMessages->scrollToBottom();
+    //    rawArincMessages->scrollToBottom();
     //}
 
     // ShowDiagram();
 
-    // labelsInfo->Update(arinc->LastMsg(),
-    //                    arinc->labels.at(arinc->LastMsg()->label).size(),
-    //                    arincChart->GetLabelMarker(arinc->LastMsg()->labelRaw));
+    // labelsInfo->Update(arincInterface->LastMsg(),
+    //                    arincInterface->labels.at(arincInterface->LastMsg()->label).size(),
+    //                    arincChart->GetLabelMarker(arincInterface->LastMsg()->labelRaw));
     // endtest
 
-    arincModel->InsertNewMessage(arinc->LastMsg());
+    arincModel->InsertNewMessage(arincInterface->LastMsg());
 
-    if (labelsInfo->ShouldBeepOnArival(arinc->LastMsg()->labelRaw))
-        Beep((arinc->LastMsg()->labelRaw + 100) * 4, 100);
+    if (labelsInfo->ShouldBeepOnArival(arincInterface->LastMsg()->labelRaw))
+        Beep((arincInterface->LastMsg()->labelRaw + 100) * 4, 100);
 }
 
 bool
-Output::SaveSession()
+ArincDataDisplay::SaveSession()
 {
     auto saveto_fileAddress = QFileDialog::getSaveFileName(nullptr, tr("Save session to file"), "LastSession.txt");
 
@@ -218,8 +184,8 @@ Output::SaveSession()
 }
 
 void
-Output::ScrollAndSelectMsg(size_t item)
+ArincDataDisplay::ScrollAndSelectMsg(size_t item)
 {
-    rawMessages->scrollToItem(rawMessages->item(arincChart->GetIdxOfSelectedMessage()));
-    rawMessages->setCurrentRow((arincChart->GetIdxOfSelectedMessage()));
+    rawArincMessages->scrollToItem(rawArincMessages->item(arincChart->GetIdxOfSelectedMessage()));
+    rawArincMessages->setCurrentRow((arincChart->GetIdxOfSelectedMessage()));
 }

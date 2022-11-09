@@ -2,7 +2,7 @@
 #include <QDateTime>
 #include "serialib.h"
 #include "arinc_model_configs.hpp"
-
+#include "supermap.hpp"
 
 #ifndef _T
 #ifdef QT_VERSION
@@ -99,7 +99,7 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
     {
         return std::vector<single_config_t>{ port, baudrate, databits, stopbits, parity };
     }
-    QString GetConfigsFileName() { return decodeConfigsFile2; }
+    QString GetDTMsgConfigsFilename() { return decodeConfigsFile2; }
 
     using _helper<std::pair<_Key, _Val>, superMap<_Key, _Val>, _Val>::ConvToPairByValueIfAny;
 
@@ -185,9 +185,9 @@ class _SerialConfigs : protected _helper<std::pair<_Key, _Val>, superMap<_Key, _
 
 using SerialConfigs = _SerialConfigs<int, QString>;
 
-struct dataPacket {
-    dataPacket() = default;
-    dataPacket(int bufferLen, ArincQModel::MsgNumT msg_idx, QDateTime &&t)
+struct DTdataPacket {
+    DTdataPacket() = default;
+    DTdataPacket(int bufferLen, ArincQModel::MsgNumT msg_idx, QDateTime &&t)
       : msgIdx(msg_idx)
       , msg_arrival_time(std::move(t))
     {

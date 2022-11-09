@@ -7,10 +7,10 @@
 #include "deque_s.hpp"
 #include "global_configs.hpp"
 
-class dataPacket;
+class DTdataPacket;
 class QTabWidget;
 class ReadingThread;
-class Output;
+class ArincDataDisplay;
 
 class MainWindow : public QMainWindow,
                    public Ui::MainWindowClass {
@@ -29,8 +29,8 @@ class MainWindow : public QMainWindow,
   private:
     QTabWidget                          *outputTabs = nullptr;
     std::shared_ptr<void>                databridgeConfig;
-    deque_s<std::shared_ptr<dataPacket>> databridgeData;
+    deque_s<std::shared_ptr<DTdataPacket>> databridgeData;
 
-    ReadingThread *readerThr = nullptr;
-    Output  *writerThr = nullptr;
+    ReadingThread    *readerThr    = nullptr;
+    ArincDataDisplay *arincDisplay = nullptr;
 };

@@ -9,7 +9,7 @@
 #include "arinc_model_configs.hpp"
 
 class _ArincLabel;
-class dataPacket;
+class DTdataPacket;
 
 class ArincLabel : protected std::pair<int, QString> {
   public:
@@ -114,17 +114,17 @@ class ArincMsg {
 //     std::map<QString, DTWordField> anatomy;
 // };
 
-class ArincDriver {
+class ArincPhysicalInterface {
   public:
-    ArincDriver();
-    ~ArincDriver();
-    explicit ArincDriver(const QString &decode_file_name);
+    ArincPhysicalInterface();
+    ~ArincPhysicalInterface();
+    explicit ArincPhysicalInterface(const QString &decode_file_name);
 
     void SetDecodeConfigsFileName(const QString &filename) noexcept(std::is_nothrow_assignable_v<QString, QString &>);
     QString const &GetDecodeConfigsFileName() const noexcept;
     void           GetDecodeConfigsFromFile();
-    void           NormalizeAndStoreMsg(std::shared_ptr<dataPacket> data);
-    void           NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &elemStructure, auto &container);
+    void           NormalizeAndStoreMsg(std::shared_ptr<DTdataPacket> data);
+    void           NormalizeMsgItem(std::shared_ptr<DTdataPacket> data, DTWordField &elemStructure, auto &container);
     void           MsgPushBack(auto msg);
     std::shared_ptr<ArincMsg> FirstMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>);
     std::shared_ptr<ArincMsg> LastMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>);
