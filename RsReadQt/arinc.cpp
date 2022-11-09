@@ -11,25 +11,25 @@
 #include "arinc.hpp"
 #include "Serial.h"
 #include "serial_private.hpp"
+#include "datatrack.hpp"
 
-class ArincDriver::ArincDriverImpl {
+class ArincPhysicalInterface::ArincDriverImpl {
   public:
-    bool                                                         anatomyIsConfigured = false;
-    bool                                                         newConfigsFile      = false;
-    uint64_t                                                     lastMsgReadedNum    = 0;
-    QString                                                      decodeSpecsFileName;
+    bool                                                         DTMsgAnatomyIsInitialized = false;
+    uint64_t                                                     lastMsgReadedNum          = 0;
+    QString                                                      DTMsgDecodeConfigsFile;
     std::map<QString, DTWordField>                               DTMsgAnatomy;
     std::deque<std::shared_ptr<ArincMsg>>                        messages;
     std::map<ArincLabel, std::vector<std::shared_ptr<ArincMsg>>> labels;
 };
 
-ArincDriver::ArincDriver()
+ArincPhysicalInterface::ArincPhysicalInterface()
   : impl{ std::make_unique<ArincDriverImpl>() }
 { }
 
-ArincDriver::~ArincDriver() = default;
+ArincPhysicalInterface::~ArincPhysicalInterface() = default;
 
-ArincDriver::ArincDriver(const QString &decode_file_name)
+ArincPhysicalInterface::ArincPhysicalInterface(const QString &decode_file_name)
   : impl{ std::make_unique<ArincDriverImpl>() }
 {
     SetDecodeConfigsFileName(decode_file_name);
@@ -48,19 +48,20 @@ ArincDriver::ArincDriver(const QString &decode_file_name)
 }
 
 void
-ArincDriver::SetDecodeConfigsFileName(const QString &filename) noexcept(std::is_nothrow_assignable_v<QString, QString &>)
+ArincPhysicalInterface::SetDecodeConfigsFileName(const QString &filename) noexcept(
+  std::is_nothrow_assignable_v<QString, QString &>)
 {
-    impl->decodeSpecsFileName = filename;
+    impl->DTMsgDecodeConfigsFile = filename;
 }
 
 QString const &
-ArincDriver::GetDecodeConfigsFileName() const noexcept
+ArincPhysicalInterface::GetDecodeConfigsFileName() const noexcept
 {
-    return impl->decodeSpecsFileName;
+    return impl->DTMsgDecodeConfigsFile;
 }
 
 void
-ArincDriver::GetDecodeConfigsFromFile()
+ArincPhysicalInterface::GetDecodeConfigsFromFile()
 {
     auto jsonfile = QFile{ GetDecodeConfigsFileName() };
     jsonfile.open(QIODeviceBase::OpenModeFlag::ReadOnly);
@@ -109,7 +110,7 @@ ArincDriver::GetDecodeConfigsFromFile()
 
             };
 
-            impl->anatomyIsConfigured = false;
+            impl->DTMsgAnatomyIsInitialized = false;
             return;
         }
 
@@ -121,7 +122,7 @@ ArincDriver::GetDecodeConfigsFromFile()
                   " has active bits number exceeding number of bits calculated from \"Mesaage length bytes\""
             };
 
-            impl->anatomyIsConfigured = false;
+            impl->DTMsgAnatomyIsInitialized = false;
             return;
         }
 
@@ -154,11 +155,11 @@ ArincDriver::GetDecodeConfigsFromFile()
         impl->DTMsgAnatomy[chunkName.toString()] = std::move(chunk);
     }
 
-    impl->anatomyIsConfigured = true;
+    impl->DTMsgAnatomyIsInitialized = true;
 }
 
 void
-ArincDriver::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &configs, auto &container)
+ArincPhysicalInterface::NormalizeMsgItem(std::shared_ptr<DTdataPacket> data, DTWordField &configs, auto &container)
 {
     auto firstByteNum = configs.activeBits.first / 8;
     auto lastByteNum  = configs.activeBits.second / 8;
@@ -223,13 +224,13 @@ ArincDriver::NormalizeMsgItem(std::shared_ptr<dataPacket> data, DTWordField &con
 }
 
 void
-ArincDriver::MsgPushBack(auto msg)
+ArincPhysicalInterface::MsgPushBack(auto msg)
 {
     impl->messages.push_back(msg);
 }
 
 void
-ArincDriver::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
+ArincPhysicalInterface::NormalizeAndStoreMsg(std::shared_ptr<DTdataPacket> rawData)
 {
     auto msg = std::make_shared<ArincMsg>();
 
@@ -262,25 +263,25 @@ ArincDriver::NormalizeAndStoreMsg(std::shared_ptr<dataPacket> rawData)
 }
 
 std::shared_ptr<ArincMsg>
-ArincDriver::FirstMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>)
+ArincPhysicalInterface::FirstMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>)
 {
     return impl->messages.front();
 }
 
 std::shared_ptr<ArincMsg>
-ArincDriver::LastMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>)
+ArincPhysicalInterface::LastMsg() const noexcept(std::is_nothrow_constructible_v<std::shared_ptr<ArincMsg>>)
 {
     return impl->messages.back();
 }
 
 ArincQModel::MsgNumT
-ArincDriver::GetLastReadedMsgNumber() const noexcept
+ArincPhysicalInterface::GetLastReadedMsgNumber() const noexcept
 {
     return impl->lastMsgReadedNum;
 }
 
 void
-ArincDriver::SetLastReadedMsgNumber(ArincQModel::MsgNumT count) noexcept
+ArincPhysicalInterface::SetLastReadedMsgNumber(ArincQModel::MsgNumT count) noexcept
 {
     impl->lastMsgReadedNum = count;
 }

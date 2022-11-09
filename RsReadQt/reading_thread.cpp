@@ -3,19 +3,19 @@
 
 class ReadingThread::ReadingThreadImpl {
   public:
-    explicit ReadingThreadImpl(std::shared_ptr<void> databidgeData, deque_s<std::shared_ptr<::dataPacket>> &data);
+    explicit ReadingThreadImpl(std::shared_ptr<void> databidgeData, deque_s<std::shared_ptr<::DTdataPacket>> &data);
 
-    Serial serDevice;
+    SerialInterface serDevice;
     bool   isPaused = false;
 };
 
-ReadingThread::ReadingThreadImpl::ReadingThreadImpl(std::shared_ptr<void>                   databidgeData,
-                                                    deque_s<std::shared_ptr<::dataPacket>> &data)
-  : serDevice(std::static_pointer_cast<::SerialConfigs>(databidgeData), data)
+ReadingThread::ReadingThreadImpl::ReadingThreadImpl(std::shared_ptr<void>                   databidgeConfigs,
+                                                    deque_s<std::shared_ptr<::DTdataPacket>> &data)
+  : serDevice(std::static_pointer_cast<::SerialConfigs>(databidgeConfigs), data)
 { }
 
 ReadingThread::ReadingThread(std::shared_ptr<void>                   databidgeData,
-                             deque_s<std::shared_ptr<::dataPacket>> &data,
+                             deque_s<std::shared_ptr<::DTdataPacket>> &data,
                              QObject                                *parent)
   : impl{ std::make_unique<ReadingThreadImpl>(databidgeData, data) }
   , QThread(parent)

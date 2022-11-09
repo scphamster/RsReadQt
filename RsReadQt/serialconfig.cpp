@@ -42,7 +42,7 @@ SerialConfig::SaveSettingsToSystem()
     {
         settings.setValue("Port", localSelections["Port"].first);
         settings.setValue("Baudrate", localSelections["Baudrate"].second);
-        settings.setValue("ConfigsFile", serialConfigs->GetConfigsFileName());
+        settings.setValue("ConfigsFile", serialConfigs->GetDTMsgConfigsFilename());
     }
     settings.endGroup();
 }

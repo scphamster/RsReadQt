@@ -3,21 +3,23 @@
 #include "Serial.h"
 #include "deque_s.hpp"
 #include "serial_private.hpp"
+#include "datatrack.hpp"
 #include "serialib.h"
 
-Serial::Serial(std::shared_ptr<::SerialConfigs> databridgeConfigs, deque_s<std::shared_ptr<dataPacket>> &databidgeData)
+SerialInterface::SerialInterface(std::shared_ptr<::SerialConfigs>        databridgeConfigs,
+                                 deque_s<std::shared_ptr<DTdataPacket>> &databidgeData)
   : serialConfigs{ databridgeConfigs }
   , databidgeData{ databidgeData }
   , __serialdevice{ std::make_unique<serialib>() }
 { }
 
-Serial::~Serial()
+SerialInterface::~SerialInterface()
 {
     Stop();
 }
 
 char
-Serial::Open()
+SerialInterface::Open()
 {
     return __serialdevice->openDevice(serialConfigs->GetSelectedPortName().toLocal8Bit(),
                                       serialConfigs->GetSelectedBaudrate().first,
@@ -27,16 +29,16 @@ Serial::Open()
 }
 
 bool
-Serial::IsOpen() const
+SerialInterface::IsOpen() const
 {
     return __serialdevice->isDeviceOpen();
 }
 
 bool
-Serial::Read() 
+SerialInterface::Read()
 {
     auto newdata =
-      std::make_shared<dataPacket>(serialConfigs->GetSelectedMsgLen(), dataPacketN++, QDateTime::currentDateTime());
+      std::make_shared<DTdataPacket>(serialConfigs->GetSelectedMsgLen(), dataPacketN++, QDateTime::currentDateTime());
 
     auto ans = __serialdevice->readBytes(newdata->data._Unchecked_begin(), newdata->data.size(), 0);
 
@@ -53,8 +55,8 @@ Serial::Read()
     return true;
 }
 
-void 
-Serial::Flush() const
+void
+SerialInterface::Flush() const
 {
     __serialdevice->flushReceiver();
 }
@@ -65,7 +67,7 @@ Serial::Flush() const
  * \return true if device was open, otherwise false
  */
 bool
-Serial::Stop()
+SerialInterface::Stop()
 {
     if (__serialdevice->isDeviceOpen()) {
         __serialdevice->closeDevice();
@@ -77,10 +79,10 @@ Serial::Stop()
     }
 }
 
-std::shared_ptr<dataPacket>
-Serial::GetData()
+std::shared_ptr<DTdataPacket>
+SerialInterface::GetData()
 {
-    auto data_item = std::make_shared<dataPacket>();
+    auto data_item = std::make_shared<DTdataPacket>();
     if (databidgeData.empty() == false) {
         databidgeData.pop_front_wait(data_item);
     }

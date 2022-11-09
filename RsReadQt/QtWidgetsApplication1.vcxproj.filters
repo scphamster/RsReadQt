@@ -37,7 +37,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="serialthread.cpp">
+    <ClCompile Include="arinc_data_display.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\Libraries\serialib-master\serialib-master\lib\serialib.cpp">
@@ -88,12 +88,18 @@
     <ClCompile Include="arinc_label_item.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="datatrack.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ArincRawMessagesDisplay.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="serialconfig.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="serialthread.h">
+    <QtMoc Include="arinc_data_display.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="TextEdit.h">
@@ -173,6 +179,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="child_container.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ArincRawMessagesDisplay.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

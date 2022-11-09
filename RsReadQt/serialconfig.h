@@ -2,7 +2,7 @@
 
 #include <QDialog>
 #include "ui_serialconfig.h"
-//#include "Serial.h"
+//#include "SerialInterface.h"
 
 #include "supermap.hpp"
 #include "serial_private.hpp"

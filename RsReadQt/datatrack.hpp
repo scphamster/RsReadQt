@@ -1,6 +1,9 @@
 #pragma once
 
 #include <utility>
+#include <vector>
+#include <QDateTime>
+#include "arinc_model_configs.hpp"
 
 struct DTWordField {
     enum {
@@ -42,3 +45,13 @@ struct DTWordField {
         return data;
     }
 };
+
+//struct DTdataPacket {
+//    DTdataPacket() = default;
+//    DTdataPacket(int bufferLen, ArincQModel::MsgNumT msg_idx, QDateTime &&t);
+//
+//    ArincQModel::MsgNumT msgIdx          = 0;
+//    uint32_t             bytes_in_buffer = 0;
+//    QDateTime            msg_arrival_time;
+//    std::vector<char>    data{ 0 };
+//};

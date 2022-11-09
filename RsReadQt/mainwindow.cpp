@@ -12,7 +12,7 @@
 #include <QtWidgets/qhboxlayout>
 
 #include "reading_thread.hpp"
-#include "serialthread.h"
+#include "arinc_data_display.h"
 
 #include "serialconfig.h"
 
@@ -32,10 +32,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(actionConfigure_serial, &QAction::triggered, this, &MainWindow::OnSerialConfigureClicked);
     connect(actionStart_receiver, &QAction::triggered, this, &MainWindow::OnStartSerialClicked);
     connect(actionStop_receiver, &QAction::triggered, this, &MainWindow::OnStopSerialClicked);
-    
-    //test
-    
-    //endtest
 }
 
 MainWindow::~MainWindow()
@@ -77,23 +73,23 @@ MainWindow::OnStartSerialClicked()
         }
     }
 
-    if (readerThr != nullptr && writerThr != nullptr) {
+    if (readerThr != nullptr && arincDisplay != nullptr) {
         if (readerThr->isRunning()) {
             readerThr->Pause(false);
             return;
         }
     }
 
-    writerThr = new Output(databridgeData, databridgeConfig, outputTabs, this);
-    //connect(writerThr, &QThread::finished, writerThr, &QThread::deleteLater);
+    arincDisplay = new ArincDataDisplay(databridgeData, databridgeConfig, outputTabs, this);
+    //connect(arincDisplay, &QThread::finished, arincDisplay, &QThread::deleteLater);
 
     readerThr = new ReadingThread(databridgeConfig, databridgeData, this);
     connect(readerThr, &QThread::finished, readerThr, &QThread::deleteLater);
 
-    connect(readerThr, &ReadingThread::notificationDataArrived, writerThr, &Output::ShowNewData);
-    connect(saveSessionAs_menu, &QAction::triggered, writerThr, &Output::SaveSession);
+    connect(readerThr, &ReadingThread::notificationDataArrived, arincDisplay, &ArincDataDisplay::ShowNewData);
+    connect(saveSessionAs_menu, &QAction::triggered, arincDisplay, &ArincDataDisplay::SaveSession);
 
-    //writerThr->start();
+    //arincDisplay->start();
     readerThr->start();
 }
 
