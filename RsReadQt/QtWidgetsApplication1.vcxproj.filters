@@ -62,7 +62,11 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="arinc_chart.cpp">
+<<<<<<< HEAD
       <Filter>Source Files</Filter>
+=======
+      <Filter>Header Files</Filter>
+>>>>>>> 9bb84ab2bcafc5fd0040b7808721187dee14621e
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

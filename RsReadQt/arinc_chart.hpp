@@ -86,6 +86,7 @@ class ArincLabelsChart : public QWidget {
     QValueAxis *vaxis          = nullptr;
     QValueAxis *haxis          = nullptr;
 
+<<<<<<< HEAD
     //struct LabelData {
     //    LineSeries                          *series  = nullptr;
     //    LabelConfigsItem                    *configs = nullptr;
@@ -94,6 +95,16 @@ class ArincLabelsChart : public QWidget {
 
     std::map<int, std::pair<LineSeries *, std::vector<std::pair<qreal, const ArincMsg &>>>> labelsSeries;
     //std::map<int, std::unique_ptr<LabelData>>                                               labels;
+=======
+    struct LabelData {
+        LineSeries                          *series  = nullptr;
+        LabelConfigsItem                    *configs = nullptr;
+        std::vector<qreal, const ArincMsg &> messages;
+    };
+
+    std::map<int, std::pair<LineSeries *, std::vector<std::pair<qreal, const ArincMsg &>>>> labelsSeries;
+    std::map<int, std::unique_ptr<LabelData>>                                               labels;
+>>>>>>> 9bb84ab2bcafc5fd0040b7808721187dee14621e
 
 
     bool  manualAxisRange = false;
